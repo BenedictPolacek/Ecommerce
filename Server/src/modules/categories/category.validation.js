@@ -25,11 +25,7 @@ export const createCategorySchema = z.object({
     .max(100, 'Slug cannot exceed 100 characters')
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
     .optional(),
-  description: z
-    .string()
-    .trim()
-    .max(500, 'Description cannot exceed 500 characters')
-    .optional(),
+  description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
 });
 
 export const updateCategorySchema = z
@@ -47,14 +43,13 @@ export const updateCategorySchema = z
       .max(100, 'Slug cannot exceed 100 characters')
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
       .optional(),
-    description: z
-      .string()
-      .trim()
-      .max(500, 'Description cannot exceed 500 characters')
-      .optional(),
+    description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
   })
-  .refine((data) => data.name !== undefined || data.slug !== undefined || data.description !== undefined, {
-    message: 'Please provide at least one field (name, slug, or description) to update',
-  });
+  .refine(
+    (data) => data.name !== undefined || data.slug !== undefined || data.description !== undefined,
+    {
+      message: 'Please provide at least one field (name, slug, or description) to update',
+    }
+  );
 
 export default { slugify, createCategorySchema, updateCategorySchema };

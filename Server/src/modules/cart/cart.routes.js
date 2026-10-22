@@ -24,11 +24,7 @@ router.put(
 );
 
 // Remove item from cart
-router.delete(
-  '/items/:productId',
-  validateParams(productIdParamSchema),
-  cartController.removeItem
-);
+router.delete('/items/:productId', validateParams(productIdParamSchema), cartController.removeItem);
 
 // Clear entire cart
 router.delete('/', cartController.clearCart);

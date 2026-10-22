@@ -35,9 +35,8 @@ export const updateAddressSchema = z
     country: z.string().trim().length(2).optional(),
     is_default: z.boolean().optional(),
   })
-  .refine(
-    (data) => Object.values(data).some((val) => val !== undefined),
-    { message: 'Please provide at least one field to update' }
-  );
+  .refine((data) => Object.values(data).some((val) => val !== undefined), {
+    message: 'Please provide at least one field to update',
+  });
 
 export default { createAddressSchema, updateAddressSchema };

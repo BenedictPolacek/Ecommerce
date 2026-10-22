@@ -27,11 +27,6 @@ router.put(
   categoryController.update
 );
 
-router.delete(
-  '/:id',
-  authenticate,
-  authorize('admin'),
-  categoryController.delete
-);
+router.delete('/:id', authenticate, authorize('admin'), categoryController.delete);
 
 export default router;

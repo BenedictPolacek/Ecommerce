@@ -10,10 +10,9 @@ export const cartRepository = {
       return existing.rows[0];
     }
 
-    const created = await client.query(
-      'INSERT INTO carts (user_id) VALUES ($1) RETURNING *',
-      [userId]
-    );
+    const created = await client.query('INSERT INTO carts (user_id) VALUES ($1) RETURNING *', [
+      userId,
+    ]);
     return created.rows[0];
   },
 

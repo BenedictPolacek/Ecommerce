@@ -25,9 +25,7 @@ export const loginSchema = z.object({
     .trim()
     .email('Please provide a valid email address')
     .toLowerCase(),
-  password: z
-    .string({ required_error: 'Password is required' })
-    .min(1, 'Password is required'),
+  password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required'),
 });
 
 export default { registerSchema, loginSchema };

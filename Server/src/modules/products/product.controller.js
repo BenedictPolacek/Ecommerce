@@ -3,65 +3,66 @@ import { productQuerySchema } from './product.validation.js';
 import { catchAsync } from '../../utils/catchAsync.js';
 
 export const productController = {
-    getAll: catchAsync(async (req, res) => {
-        const query = productQuerySchema.parse(req.query);
-        const products = await productService.getAllProducts(query);
+  getAll: catchAsync(async (req, res) => {
+    const query = productQuerySchema.parse(req.query);
+    const products = await productService.getAllProducts(query);
 
-        res.status(200).json({
-            success: true,
-            data: products,
-        });
-    }),
+    res.status(200).json({
+      success: true,
+      data: products,
+    });
+  }),
 
-    getOne: catchAsync(async (req, res) => {
-        const id = req.idParam || req.params.id;
-        const product = await productService.getProductById(id);
+  getOne: catchAsync(async (req, res) => {
+    const id = req.idParam || req.params.id;
+    const product = await productService.getProductById(id);
 
-        res.status(200).json({
-            success: true,
-            data: product,
-        });
-    }),
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  }),
 
-    create: catchAsync(async (req, res) => {
-        const product = await productService.createProduct(req.body);
+  create: catchAsync(async (req, res) => {
+    const product = await productService.createProduct(req.body);
 
-        res.status(201).json({
-            success: true,
-            data: product,
-        });
-    }),
+    res.status(201).json({
+      success: true,
+      data: product,
+    });
+  }),
 
-    update: catchAsync(async (req, res) => {
-        const id = req.idParam || req.params.id;
-        const product = await productService.updateProduct(id, req.body);
+  update: catchAsync(async (req, res) => {
+    const id = req.idParam || req.params.id;
+    const product = await productService.updateProduct(id, req.body);
 
-        res.status(200).json({
-            success: true,
-            data: product,
-        });
-    }),
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  }),
 
-    updateStock: catchAsync(async (req, res) => {
-        const id = req.idParam || req.params.id;
-        const stockQuantity = req.body.stock_quantity !== undefined ? req.body.stock_quantity : req.body;
-        const product = await productService.updateStock(id, stockQuantity);
+  updateStock: catchAsync(async (req, res) => {
+    const id = req.idParam || req.params.id;
+    const stockQuantity =
+      req.body.stock_quantity !== undefined ? req.body.stock_quantity : req.body;
+    const product = await productService.updateStock(id, stockQuantity);
 
-        res.status(200).json({
-            success: true,
-            data: product,
-        });
-    }),
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+  }),
 
-    delete: catchAsync(async (req, res) => {
-        const id = req.idParam || req.params.id;
-        await productService.deleteProduct(id);
+  delete: catchAsync(async (req, res) => {
+    const id = req.idParam || req.params.id;
+    await productService.deleteProduct(id);
 
-        res.status(200).json({
-            success: true,
-            data: null,
-        });
-    }),
+    res.status(200).json({
+      success: true,
+      data: null,
+    });
+  }),
 };
 
 export default productController;

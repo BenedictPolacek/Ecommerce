@@ -64,7 +64,7 @@ export const categoryService = {
     }
 
     // 2. Check slug conflict if slug is being changed
-    let finalSlug = slug !== undefined ? slugify(slug) : undefined;
+    const finalSlug = slug !== undefined ? slugify(slug) : undefined;
     if (finalSlug && finalSlug !== existingCategory.slug) {
       const slugConflict = await categoryRepository.findBySlug(finalSlug);
       if (slugConflict && slugConflict.id !== id) {
