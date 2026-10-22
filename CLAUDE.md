@@ -17,11 +17,13 @@ it is up to you to show me best practices and ways to create this project as rea
 - `main` is protected: no direct pushes. Every change goes through a pull request and needs the `Server tests` CI check to pass.
 - Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
 - After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
-- CI: GitHub Actions in `.github/workflows/ci.yml` (Node 20, `npm ci`, `npm test` in `Server/`).
+- CI: GitHub Actions in `.github/workflows/ci.yml` (Node 20): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`.
 
 ## Server commands (run inside `Server/`)
 - `npm run dev` – start with nodemon (port from `.env`, default 5000)
 - `npm test` – Jest + Supertest (`tests/`)
+- `npm run lint` / `npm run lint:fix` – ESLint (flat config `eslint.config.js`)
+- `npm run format` / `npm run format:check` – Prettier (`.prettierrc.json`); CI runs lint + format:check
 - `npm run db:migrate` – creates the DB if missing and runs `drawSQL-pgsql-export-2026-08-16.sql`
 - API docs: `http://localhost:5000/api/docs` (Swagger)
 
