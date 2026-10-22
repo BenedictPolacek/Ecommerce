@@ -1,7 +1,8 @@
 # Ecommerce Project
 
 Learning project (Codecademy portfolio) built like a real company project.
-Backend first, then a frontend (framework not chosen yet), later DevOps (CI/CD, Docker, deployment).
+Backend first, then a frontend (framework not chosen yet), DevOps (CI/CD, Docker, deployment).
+it is up to you to show me best practices and ways to create this project as real as possible.
 
 ## Working with me
 - I am learning. Explain every step in **German**: what you are doing and *why*. Code, comments and commit messages stay in English.
@@ -11,6 +12,12 @@ Backend first, then a frontend (framework not chosen yet), later DevOps (CI/CD, 
 ## Layout
 - `Server/` – REST API (Node.js, Express 4, PostgreSQL via `pg`, ES modules)
 - (later) `Client/` – frontend
+
+## Git workflow
+- `main` is protected: no direct pushes. Every change goes through a pull request and needs the `Server tests` CI check to pass.
+- Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
+- After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
+- CI: GitHub Actions in `.github/workflows/ci.yml` (Node 20, `npm ci`, `npm test` in `Server/`).
 
 ## Server commands (run inside `Server/`)
 - `npm run dev` – start with nodemon (port from `.env`, default 5000)
