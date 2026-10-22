@@ -33,10 +33,7 @@ export const productRepository = {
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Count query for pagination metadata
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM products p ${where}`,
-      values
-    );
+    const countResult = await pool.query(`SELECT COUNT(*) FROM products p ${where}`, values);
     const total = parseInt(countResult.rows[0].count, 10);
 
     // Data query

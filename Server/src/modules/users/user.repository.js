@@ -38,7 +38,13 @@ export const userRepository = {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, email, first_name, last_name, role, created_at, updated_at
     `;
-    const values = [email.toLowerCase().trim(), password_hash, first_name.trim(), last_name.trim(), role];
+    const values = [
+      email.toLowerCase().trim(),
+      password_hash,
+      first_name.trim(),
+      last_name.trim(),
+      role,
+    ];
     const result = await client.query(query, values);
     return result.rows[0];
   },
@@ -55,11 +61,7 @@ export const userRepository = {
       WHERE id = $3
       RETURNING id, email, first_name, last_name, role, created_at, updated_at
     `;
-    const values = [
-      first_name ? first_name.trim() : null,
-      last_name ? last_name.trim() : null,
-      id,
-    ];
+    const values = [first_name ? first_name.trim() : null, last_name ? last_name.trim() : null, id];
     const result = await pool.query(query, values);
     return result.rows[0] || null;
   },

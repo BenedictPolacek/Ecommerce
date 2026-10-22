@@ -14,14 +14,11 @@ const sendTokenResponse = (result, statusCode, message, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 
-  res
-    .status(statusCode)
-    .cookie('token', result.token, cookieOptions)
-    .json({
-      success: true,
-      message,
-      data: result,
-    });
+  res.status(statusCode).cookie('token', result.token, cookieOptions).json({
+    success: true,
+    message,
+    data: result,
+  });
 };
 
 export const authController = {

@@ -22,6 +22,12 @@ router.get('/all', authorize('admin'), controller.listAllOrders);
 router.get('/:id', validateIdParam, controller.getOrder);
 
 // Admin: Update order status
-router.patch('/:id/status', authorize('admin'), validateIdParam, validate(updateOrderStatusSchema), controller.updateStatus);
+router.patch(
+  '/:id/status',
+  authorize('admin'),
+  validateIdParam,
+  validate(updateOrderStatusSchema),
+  controller.updateStatus
+);
 
 export default router;

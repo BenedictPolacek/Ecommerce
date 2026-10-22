@@ -19,10 +19,9 @@ async function ensureDatabaseExists() {
 
   await client.connect();
 
-  const checkDb = await client.query(
-    'SELECT 1 FROM pg_database WHERE datname = $1',
-    [config.db.database]
-  );
+  const checkDb = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [
+    config.db.database,
+  ]);
 
   if (checkDb.rowCount === 0) {
     console.log(` Database "${config.db.database}" does not exist. Creating it...`);

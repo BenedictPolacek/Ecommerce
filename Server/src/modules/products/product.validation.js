@@ -16,11 +16,7 @@ export const createProductSchema = z.object({
     .max(64, 'SKU cannot exceed 64 characters')
     .optional(),
 
-  description: z
-    .string()
-    .trim()
-    .max(5000, 'Description cannot exceed 5000 characters')
-    .optional(),
+  description: z.string().trim().max(5000, 'Description cannot exceed 5000 characters').optional(),
 
   price: z
     .number({ required_error: 'Price is required', invalid_type_error: 'Price must be a number' })
@@ -34,11 +30,7 @@ export const createProductSchema = z.object({
     .optional()
     .default(0),
 
-  category_id: z
-    .string()
-    .uuid('category_id must be a valid UUID')
-    .optional()
-    .nullable(),
+  category_id: z.string().uuid('category_id must be a valid UUID').optional().nullable(),
 
   is_active: z.boolean().optional().default(true),
 });
@@ -81,25 +73,22 @@ export const updateProductSchema = z
       .min(0, 'Stock quantity cannot be negative')
       .optional(),
 
-    category_id: z
-      .string()
-      .uuid('category_id must be a valid UUID')
-      .optional()
-      .nullable(),
+    category_id: z.string().uuid('category_id must be a valid UUID').optional().nullable(),
 
     is_active: z.boolean().optional(),
   })
-  .refine(
-    (data) =>
-      Object.values(data).some((v) => v !== undefined),
-    { message: 'Please provide at least one field to update' }
-  );
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: 'Please provide at least one field to update',
+  });
 
 // ─── Stock update ─────────────────────────────────────────────────────────────
 
 export const updateStockSchema = z.object({
   stock_quantity: z
-    .number({ required_error: 'stock_quantity is required', invalid_type_error: 'Stock quantity must be a number' })
+    .number({
+      required_error: 'stock_quantity is required',
+      invalid_type_error: 'Stock quantity must be a number',
+    })
     .int('Stock quantity must be a whole number')
     .min(0, 'Stock quantity cannot be negative'),
 });

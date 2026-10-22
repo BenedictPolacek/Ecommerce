@@ -62,10 +62,9 @@ export const orderRepository = {
   },
 
   findOrderItems: async (orderId) => {
-    const { rows } = await pool.query(
-      'SELECT * FROM order_items WHERE order_id = $1 ORDER BY id',
-      [orderId]
-    );
+    const { rows } = await pool.query('SELECT * FROM order_items WHERE order_id = $1 ORDER BY id', [
+      orderId,
+    ]);
     return rows;
   },
 
@@ -83,10 +82,10 @@ export const orderRepository = {
   },
 
   updateOrderStatus: async (orderId, status) => {
-    const { rows } = await pool.query(
-      'UPDATE orders SET status = $2 WHERE id = $1 RETURNING *',
-      [orderId, status]
-    );
+    const { rows } = await pool.query('UPDATE orders SET status = $2 WHERE id = $1 RETURNING *', [
+      orderId,
+      status,
+    ]);
     return rows[0] || null;
   },
 };

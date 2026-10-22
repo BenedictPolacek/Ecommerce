@@ -67,7 +67,7 @@ export const authorize = (...roles) => {
       }
 
       next();
-    } catch (error) {
+    } catch {
       return next(new AppError('Failed to verify user permissions.', 500));
     }
   };

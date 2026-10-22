@@ -29,7 +29,7 @@ const handlePostgresError = (err) => {
  * Formats errors consistently, sanitizes internal errors in production,
  * and handles Postgres, JWT, and JSON syntax errors.
  */
-export const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, _next) => {
   let error = err;
 
   // 1. Malformed JSON payload in request body
@@ -49,7 +49,8 @@ export const errorHandler = (err, req, res, next) => {
     error = handlePostgresError(err);
   }
 
-  const statusCode = error.statusCode || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
+  const statusCode =
+    error.statusCode || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Logging
@@ -68,8 +69,8 @@ export const errorHandler = (err, req, res, next) => {
     message: error.isOperational
       ? error.message
       : isDevelopment
-      ? error.message || 'Internal Server Error'
-      : 'Internal Server Error',
+        ? error.message || 'Internal Server Error'
+        : 'Internal Server Error',
     ...(error.errors && { errors: error.errors }),
     ...(isDevelopment && { stack: error.stack || err.stack }),
   });

@@ -38,7 +38,10 @@ export const addressRepository = {
   /**
    * Create an address
    */
-  async create(userId, { address_line1, address_line2, city, state, postal_code, country, is_default = false }) {
+  async create(
+    userId,
+    { address_line1, address_line2, city, state, postal_code, country, is_default = false }
+  ) {
     const query = `
       INSERT INTO addresses (user_id, address_line1, address_line2, city, state, postal_code, country, is_default)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -61,7 +64,11 @@ export const addressRepository = {
   /**
    * Update address fields
    */
-  async update(id, userId, { address_line1, address_line2, city, state, postal_code, country, is_default }) {
+  async update(
+    id,
+    userId,
+    { address_line1, address_line2, city, state, postal_code, country, is_default }
+  ) {
     const query = `
       UPDATE addresses
       SET

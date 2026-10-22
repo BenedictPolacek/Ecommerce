@@ -294,7 +294,11 @@ export const swaggerSpec = {
         type: 'object',
         required: ['productId', 'quantity'],
         properties: {
-          productId: { type: 'string', format: 'uuid', example: '4a0f4a7c-87d3-4613-8d0a-9d62d2948eb3' },
+          productId: {
+            type: 'string',
+            format: 'uuid',
+            example: '4a0f4a7c-87d3-4613-8d0a-9d62d2948eb3',
+          },
           quantity: { type: 'integer', minimum: 1, example: 1 },
         },
       },
@@ -365,12 +369,20 @@ export const swaggerSpec = {
           user_id: { type: 'string', format: 'uuid' },
           status: {
             type: 'string',
-            enum: ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+            enum: [
+              'pending',
+              'paid',
+              'processing',
+              'shipped',
+              'delivered',
+              'cancelled',
+              'refunded',
+            ],
             example: 'pending',
           },
           subtotal: { type: 'number', example: 199.98 },
-          tax: { type: 'number', example: 16.00 },
-          shipping_fee: { type: 'number', example: 5.00 },
+          tax: { type: 'number', example: 16.0 },
+          shipping_fee: { type: 'number', example: 5.0 },
           total_amount: { type: 'number', example: 220.98 },
           shipping_address: { $ref: '#/components/schemas/CreateAddressRequest' },
           items: {
@@ -383,14 +395,15 @@ export const swaggerSpec = {
       },
       CheckoutRequest: {
         type: 'object',
-        description: 'Provide either `addressId` for an existing address OR `shippingAddress` for a custom address.',
+        description:
+          'Provide either `addressId` for an existing address OR `shippingAddress` for a custom address.',
         properties: {
           addressId: { type: 'string', format: 'uuid', description: 'Existing user address UUID' },
           shippingAddress: { $ref: '#/components/schemas/CreateAddressRequest' },
           paymentProvider: { type: 'string', example: 'stripe' },
           paymentId: { type: 'string', example: 'pi_3MtwBwLkdIwHu7ix28a3tqPa' },
-          shippingFee: { type: 'number', example: 5.00, default: 0 },
-          tax: { type: 'number', example: 16.00, default: 0 },
+          shippingFee: { type: 'number', example: 5.0, default: 0 },
+          tax: { type: 'number', example: 16.0, default: 0 },
         },
       },
       UpdateOrderStatusRequest: {
@@ -399,7 +412,15 @@ export const swaggerSpec = {
         properties: {
           status: {
             type: 'string',
-            enum: ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+            enum: [
+              'pending',
+              'paid',
+              'processing',
+              'shipped',
+              'delivered',
+              'cancelled',
+              'refunded',
+            ],
             example: 'processing',
           },
         },
@@ -1284,7 +1305,8 @@ export const swaggerSpec = {
       post: {
         tags: ['Orders'],
         summary: 'Checkout cart and create new order',
-        description: 'Runs atomic transaction: validates cart items, reserves stock, creates order & items, and empties cart.',
+        description:
+          'Runs atomic transaction: validates cart items, reserves stock, creates order & items, and empties cart.',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         requestBody: {
           required: true,
