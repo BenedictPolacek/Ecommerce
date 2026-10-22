@@ -16,6 +16,7 @@ it is up to you to show me best practices and ways to create this project as rea
 ## Git workflow
 - `main` is protected: no direct pushes. Every change goes through a pull request and needs the `Server tests` CI check to pass.
 - Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
+- Commit messages and PR titles: Conventional Commits (`feat(cart): …`, `fix(orders): …`), see `CONTRIBUTING.md`.
 - After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
 - CI: GitHub Actions in `.github/workflows/ci.yml` (Node 20): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`.
 
