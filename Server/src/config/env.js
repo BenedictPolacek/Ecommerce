@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// quiet: dotenv 17+ logs a line on every start otherwise
+dotenv.config({ quiet: true });
 
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
