@@ -1,3 +1,5 @@
+-- Up Migration
+
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE users (
@@ -122,3 +124,17 @@ CREATE TRIGGER trg_cart_items_updated_at BEFORE UPDATE ON cart_items
 
 CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON orders
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Down Migration
+
+-- Reverse order of creation so foreign keys never block a drop.
+-- Triggers and indexes are dropped together with their tables.
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS users;
+DROP FUNCTION IF EXISTS set_updated_at();

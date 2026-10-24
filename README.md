@@ -36,7 +36,7 @@ docker compose up -d   # starts PostgreSQL on localhost:5433
 cd Server
 cp .env.example .env   # then adjust the values
 npm install
-npm run db:migrate     # creates the database and tables
+npm run db:migrate     # creates the database and runs all pending migrations
 npm run dev            # starts the API on http://localhost:5000
 ```
 
@@ -52,6 +52,18 @@ docker compose logs db   # database logs
 docker compose down      # stop (data is kept in the volume)
 docker compose down -v   # stop and delete all data
 ```
+
+## Database migrations
+
+Schema changes are versioned SQL files in [`Server/src/db/migrations/`](Server/src/db/migrations/), managed with [node-pg-migrate](https://salsita.github.io/node-pg-migrate/). Applied migrations are tracked in the `pgmigrations` table.
+
+```bash
+npm run db:migration:create add-wishlist   # new file with "-- Up Migration" / "-- Down Migration"
+npm run db:migrate                         # apply all pending migrations
+npm run db:rollback                        # revert the last migration (db:rollback -- 3 for three)
+```
+
+Rules: never edit a migration that is already merged; write a new one instead. Every migration needs a working down section.
 
 ## Running tests
 
