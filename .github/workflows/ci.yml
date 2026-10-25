@@ -39,9 +39,35 @@ jobs:
     name: Server tests
     runs-on: ubuntu-latest
 
+    # Throwaway PostgreSQL for the integration tests, same version as docker-compose.yml
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce_db_test
+        ports:
+          - 5432:5432
+        # Wait until the database accepts connections before the steps start
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     defaults:
       run:
         working-directory: Server
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci_test_secret_at_least_32_characters_long
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: ecommerce_db_test
+      PGUSER: postgres
+      PGPASSWORD: postgres
 
     steps:
       - name: Check out code
@@ -57,8 +83,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Also proves that all migrations apply cleanly to an empty database
+      - name: Run migrations
+        run: npm run db:migrate
+
       - name: Run tests
         run: npm test
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci_test_secret_at_least_32_characters_long
