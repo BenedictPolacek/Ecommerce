@@ -37,6 +37,7 @@ cd Server
 cp .env.example .env   # then adjust the values
 npm install
 npm run db:migrate     # creates the database and runs all pending migrations
+npm run db:seed        # optional: sample categories, products and an admin user
 npm run dev            # starts the API on http://localhost:5000
 ```
 
@@ -64,6 +65,14 @@ npm run db:rollback                        # revert the last migration (db:rollb
 ```
 
 Rules: never edit a migration that is already merged; write a new one instead. Every migration needs a working down section.
+
+## Seed data
+
+`npm run db:seed` fills the database with sample categories, products and an admin user (data in [`Server/src/db/seeders/data.js`](Server/src/db/seeders/data.js)). Admin login: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` from `.env` (default `admin@example.com` / `admin12345`).
+
+- Idempotent: existing rows (same slug, SKU or email) are skipped, so it is safe to run again.
+- Refuses to run when `NODE_ENV=production`.
+- Start from scratch: `docker compose down -v`, then `db:migrate` and `db:seed`.
 
 ## Running tests
 
