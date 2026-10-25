@@ -18,7 +18,7 @@ it is up to you to show me best practices and ways to create this project as rea
 - Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
 - Commit messages and PR titles: Conventional Commits (`feat(cart): …`, `fix(orders): …`), see `CONTRIBUTING.md`.
 - After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
-- CI: GitHub Actions in `.github/workflows/ci.yml` (Node 20): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first.
+- CI: GitHub Actions in `.github/workflows/ci.yml` (Node version from `.nvmrc`): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first.
 
 ## Server commands (run inside `Server/`)
 - `npm run dev` – start with nodemon (port from `.env`, default 5000)
