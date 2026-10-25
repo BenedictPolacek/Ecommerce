@@ -1,4 +1,4 @@
-import { parseEnv } from '../src/config/env.js';
+import { parseEnv } from '../../src/config/env.js';
 
 const validSecret = 'a'.repeat(32);
 

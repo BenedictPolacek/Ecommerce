@@ -5,6 +5,8 @@ node_modules/
 .env
 .env.*
 !.env.example
+# Test-only values, no secrets (see Server/.env.test)
+!.env.test
 
 # Logs & test output
 *.log

@@ -69,7 +69,12 @@ Rules: never edit a migration that is already merged; write a new one instead. E
 
 ```bash
 cd Server
-npm test
+npm test                  # all tests (needs the database from docker compose)
+npm run test:unit         # only tests without a database
+npm run test:integration  # only tests against the database
 ```
 
-Tests also run automatically on every push and pull request via GitHub Actions.
+- `tests/unit/` – no database needed.
+- `tests/integration/` – real HTTP requests against a real PostgreSQL. They use a separate database `ecommerce_db_test` (set in [`Server/.env.test`](Server/.env.test)), which is created and migrated automatically. All tables are emptied before each test, so the setup refuses to run unless the database name ends with `_test`.
+
+Tests also run automatically on every push and pull request via GitHub Actions, with a PostgreSQL service container.

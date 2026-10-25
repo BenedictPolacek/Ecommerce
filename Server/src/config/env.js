@@ -1,8 +1,12 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
+// Under Jest (NODE_ENV=test) .env.test is loaded first, so its values win over .env.
+// Real environment variables (e.g. in CI) always win over both files.
+const envFiles = process.env.NODE_ENV === 'test' ? ['.env.test', '.env'] : ['.env'];
+
 // quiet: dotenv 17+ logs a line on every start otherwise
-dotenv.config({ quiet: true });
+dotenv.config({ path: envFiles, quiet: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
