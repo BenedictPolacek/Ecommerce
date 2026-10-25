@@ -29,7 +29,7 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 
 ## Getting started
 
-Requirements: Node.js 20+, Docker (or a local PostgreSQL instance).
+Requirements: Node.js 24 (see [`.nvmrc`](.nvmrc), run `nvm use`), Docker (or a local PostgreSQL instance).
 
 ```bash
 docker compose up -d   # starts PostgreSQL on localhost:5433
