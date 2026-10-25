@@ -40,7 +40,8 @@ export const addressRepository = {
    */
   async create(
     userId,
-    { address_line1, address_line2, city, state, postal_code, country, is_default = false }
+    { address_line1, address_line2, city, state, postal_code, country, is_default = false },
+    client = pool
   ) {
     const query = `
       INSERT INTO addresses (user_id, address_line1, address_line2, city, state, postal_code, country, is_default)
@@ -57,7 +58,7 @@ export const addressRepository = {
       country.toUpperCase().trim(),
       is_default,
     ];
-    const { rows } = await pool.query(query, values);
+    const { rows } = await client.query(query, values);
     return rows[0];
   },
 
@@ -67,7 +68,8 @@ export const addressRepository = {
   async update(
     id,
     userId,
-    { address_line1, address_line2, city, state, postal_code, country, is_default }
+    { address_line1, address_line2, city, state, postal_code, country, is_default },
+    client = pool
   ) {
     const query = `
       UPDATE addresses
@@ -93,7 +95,7 @@ export const addressRepository = {
       id,
       userId,
     ];
-    const { rows } = await pool.query(query, values);
+    const { rows } = await client.query(query, values);
     return rows[0] || null;
   },
 

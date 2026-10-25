@@ -86,10 +86,13 @@ export const orderService = {
         });
       }
 
-      const shippingFee = Number(checkoutData.shippingFee || 0);
-      const tax = Number(checkoutData.tax || 0);
-      const total = Number((subtotal + shippingFee + tax).toFixed(2));
-      subtotal = Number(subtotal.toFixed(2));
+      // Round every part to cents before summing, so total matches the
+      // DB check total = subtotal + tax + shipping_fee exactly.
+      const roundToCents = (value) => Number(Number(value || 0).toFixed(2));
+      subtotal = roundToCents(subtotal);
+      const shippingFee = roundToCents(checkoutData.shippingFee);
+      const tax = roundToCents(checkoutData.tax);
+      const total = roundToCents(subtotal + shippingFee + tax);
 
       // 4. Create Order record
       const order = await orderRepository.createOrder(client, {
