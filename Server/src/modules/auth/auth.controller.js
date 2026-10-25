@@ -1,11 +1,12 @@
 import { catchAsync } from '../../utils/catchAsync.js';
 import { authService } from './auth.service.js';
+import { config } from '../../config/env.js';
 
 /**
  * Attaches the JWT to a secure httpOnly cookie and sends the response.
  */
 const sendTokenResponse = (result, statusCode, message, res) => {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const { isProduction } = config;
 
   const cookieOptions = {
     httpOnly: true, // Prevents JavaScript from reading the cookie (XSS protection)
@@ -45,7 +46,7 @@ export const authController = {
    * POST /api/auth/logout
    */
   logout: (req, res) => {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const { isProduction } = config;
 
     res.clearCookie('token', {
       httpOnly: true,
