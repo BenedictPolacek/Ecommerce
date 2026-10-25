@@ -23,7 +23,7 @@ Closes #
 - [ ] Tests added/updated for new behavior
 - [ ] Swagger docs (`src/docs/swagger.js`) updated for API changes
 - [ ] New module registered in `src/routes/index.js`
-- [ ] DB schema changes: SQL file updated
+- [ ] DB schema changes: new migration added (`npm run db:migration:create`), merged migrations untouched
 - [ ] New env variables added to `.env.example`
 - [ ] No secrets or `.env` committed
 
