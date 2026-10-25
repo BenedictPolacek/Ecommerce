@@ -61,4 +61,4 @@ jobs:
         run: npm test
         env:
           NODE_ENV: test
-          JWT_SECRET: ci_test_secret
+          JWT_SECRET: ci_test_secret_at_least_32_characters_long

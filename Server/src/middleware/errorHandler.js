@@ -1,4 +1,5 @@
 import { AppError } from '../utils/AppError.js';
+import { config } from '../config/env.js';
 
 /**
  * Maps PostgreSQL error codes to operational AppError instances.
@@ -51,10 +52,10 @@ export const errorHandler = (err, req, res, _next) => {
 
   const statusCode =
     error.statusCode || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = config.nodeEnv === 'development';
 
   // Logging
-  if (process.env.NODE_ENV !== 'test') {
+  if (config.nodeEnv !== 'test') {
     if (statusCode >= 500) {
       console.error(`[CRITICAL ERROR 500] ${error.message}`);
       console.error(error.stack || err.stack);
