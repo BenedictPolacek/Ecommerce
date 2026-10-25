@@ -5,12 +5,12 @@ import { AppError } from '../utils/AppError.js';
  * Middleware generator for Zod request validation.
  * Parses and sanitizes req.body, attaching validated data back to req.body.
  *
- * @param {import('zod').ZodSchema} schema - Zod schema to validate against
+ * @param {import('zod').ZodType} schema - Zod schema to validate against
  */
 
 const handleZodError = (error, next) => {
   if (error instanceof ZodError) {
-    const details = error.errors.map((err) => ({
+    const details = error.issues.map((err) => ({
       field: err.path.join('.'),
       message: err.message,
     }));
@@ -38,7 +38,7 @@ export const validateParams = (schema) => (req, res, next) => {
 };
 
 const idParamSchema = z.object({
-  id: z.string().uuid('Invalid identifier format (must be a valid UUID)'),
+  id: z.uuid('Invalid identifier format (must be a valid UUID)'),
 });
 
 export const validateIdParam = (req, res, next) => {

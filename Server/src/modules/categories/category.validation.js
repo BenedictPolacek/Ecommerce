@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { requiredString } from '../../utils/zod.js';
 
 /**
  * Utility to generate URL-friendly slug from string
@@ -13,8 +14,7 @@ export const slugify = (text) => {
 };
 
 export const createCategorySchema = z.object({
-  name: z
-    .string({ required_error: 'Category name is required' })
+  name: requiredString('Category name is required')
     .trim()
     .min(1, 'Category name cannot be empty')
     .max(100, 'Category name cannot exceed 100 characters'),
@@ -48,7 +48,7 @@ export const updateCategorySchema = z
   .refine(
     (data) => data.name !== undefined || data.slug !== undefined || data.description !== undefined,
     {
-      message: 'Please provide at least one field (name, slug, or description) to update',
+      error: 'Please provide at least one field (name, slug, or description) to update',
     }
   );
 

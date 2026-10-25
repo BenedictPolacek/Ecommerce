@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const addItemSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
   quantity: z.number().int().positive(),
 });
 
@@ -10,5 +10,5 @@ export const updateItemSchema = z.object({
 });
 
 export const productIdParamSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
