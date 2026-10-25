@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../src/app.js';
+import app from '../../src/app.js';
 
 describe('Base API & Error Handling', () => {
   it('GET / should return 200 with service info', async () => {
