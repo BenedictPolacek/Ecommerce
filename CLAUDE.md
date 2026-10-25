@@ -40,7 +40,7 @@ Feature modules in `src/modules/<feature>/`, each with the same layers:
 - **controller**: wrapped in `catchAsync`; responds `{ success: true, data }`
 - **service**: business logic; throws `new AppError(message, statusCode)`
 - **repository**: raw parameterized SQL only (`$1, $2`), never string-concatenate user input
-- **validation**: Zod schemas
+- **validation**: Zod 4 schemas; required fields via `requiredString`/`requiredNumber` from `src/utils/zod.js`, formats via `z.uuid()`/`z.email()`
 - New modules must be registered in `src/routes/index.js` and documented in `src/docs/swagger.js`.
 
 Conventions:
