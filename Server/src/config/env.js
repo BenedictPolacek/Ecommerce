@@ -24,6 +24,10 @@ const envSchema = z.object({
   JWT_SECRET: requiredString('JWT_SECRET is required').min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
+
+  // Only used by `npm run db:seed`, which refuses to run in production
+  SEED_ADMIN_EMAIL: z.email().default('admin@example.com'),
+  SEED_ADMIN_PASSWORD: z.string().min(8).default('admin12345'),
 });
 
 /**
@@ -61,6 +65,10 @@ export const parseEnv = (rawEnv) => {
     },
     bcrypt: {
       saltRounds: env.BCRYPT_SALT_ROUNDS,
+    },
+    seed: {
+      adminEmail: env.SEED_ADMIN_EMAIL,
+      adminPassword: env.SEED_ADMIN_PASSWORD,
     },
   };
 };
