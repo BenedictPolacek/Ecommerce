@@ -12,14 +12,14 @@ export const shippingAddressSchema = z.object({
 export const checkoutSchema = z
   .object({
     shippingAddress: shippingAddressSchema.optional(),
-    addressId: z.string().uuid('Invalid address UUID').optional(),
+    addressId: z.uuid('Invalid address UUID').optional(),
     paymentProvider: z.string().trim().max(50).optional(),
     paymentId: z.string().trim().max(255).optional(),
     shippingFee: z.number().min(0).optional().default(0),
     tax: z.number().min(0).optional().default(0),
   })
   .refine((data) => data.shippingAddress !== undefined || data.addressId !== undefined, {
-    message: 'Please provide either a shippingAddress object or an existing addressId',
+    error: 'Please provide either a shippingAddress object or an existing addressId',
   });
 
 export const orderStatusEnum = z.enum([
@@ -37,7 +37,7 @@ export const updateOrderStatusSchema = z.object({
 });
 
 export const orderIdParamSchema = z.object({
-  id: z.string().uuid('Invalid order ID format (must be a valid UUID)'),
+  id: z.uuid('Invalid order ID format (must be a valid UUID)'),
 });
 
 export default {

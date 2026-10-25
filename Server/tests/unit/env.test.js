@@ -19,7 +19,13 @@ describe('parseEnv', () => {
   });
 
   it('throws when JWT_SECRET is missing', () => {
-    expect(() => parseEnv({})).toThrow(/JWT_SECRET/);
+    expect(() => parseEnv({})).toThrow('JWT_SECRET: JWT_SECRET is required');
+  });
+
+  it('rejects an invalid DATABASE_URL', () => {
+    expect(() => parseEnv({ JWT_SECRET: validSecret, DATABASE_URL: 'not a url' })).toThrow(
+      /DATABASE_URL/
+    );
   });
 
   it('throws when JWT_SECRET is too short', () => {

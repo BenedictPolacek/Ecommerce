@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { requiredString } from '../utils/zod.js';
 
 // Under Jest (NODE_ENV=test) .env.test is loaded first, so its values win over .env.
 // Real environment variables (e.g. in CI) always win over both files.
@@ -12,7 +13,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
 
-  DATABASE_URL: z.string().url().optional(),
+  DATABASE_URL: z.url().optional(),
   PGHOST: z.string().default('localhost'),
   PGPORT: z.coerce.number().int().positive().default(5432),
   PGDATABASE: z.string().default('ecommerce_db'),
@@ -20,7 +21,7 @@ const envSchema = z.object({
   PGPASSWORD: z.string().default('postgres'),
 
   // No fallback on purpose: a guessable secret would let anyone forge tokens
-  JWT_SECRET: z.string({ required_error: 'JWT_SECRET is required' }).min(32),
+  JWT_SECRET: requiredString('JWT_SECRET is required').min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
 });
