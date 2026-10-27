@@ -18,10 +18,10 @@ export async function seed() {
     let insertedCategories = 0;
     for (const category of categories) {
       const { rowCount } = await client.query(
-        `INSERT INTO categories (name, slug, description)
-         VALUES ($1, $2, $3)
+        `INSERT INTO categories (name, slug, description, parent_id)
+         VALUES ($1, $2, $3, (SELECT id FROM categories WHERE slug = $4))
          ON CONFLICT DO NOTHING`,
-        [category.name, category.slug, category.description]
+        [category.name, category.slug, category.description, category.parent ?? null]
       );
       insertedCategories += rowCount;
     }

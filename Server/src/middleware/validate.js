@@ -8,13 +8,20 @@ import { AppError } from '../utils/AppError.js';
  * @param {import('zod').ZodType} schema - Zod schema to validate against
  */
 
+/**
+ * Converts a ZodError into a 400 AppError with one entry per invalid field.
+ */
+export const toValidationError = (error) => {
+  const details = error.issues.map((err) => ({
+    field: err.path.join('.'),
+    message: err.message,
+  }));
+  return new AppError('Validation failed', 400, details);
+};
+
 const handleZodError = (error, next) => {
   if (error instanceof ZodError) {
-    const details = error.issues.map((err) => ({
-      field: err.path.join('.'),
-      message: err.message,
-    }));
-    return next(new AppError('Validation failed', 400, details));
+    return next(toValidationError(error));
   }
   next(error);
 };

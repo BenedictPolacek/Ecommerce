@@ -26,6 +26,7 @@ export const createCategorySchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
     .optional(),
   description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
+  parent_id: z.uuid('parent_id must be a valid UUID').optional().nullable(),
 });
 
 export const updateCategorySchema = z
@@ -44,12 +45,17 @@ export const updateCategorySchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
       .optional(),
     description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
+    parent_id: z.uuid('parent_id must be a valid UUID').optional().nullable(),
   })
-  .refine(
-    (data) => data.name !== undefined || data.slug !== undefined || data.description !== undefined,
-    {
-      error: 'Please provide at least one field (name, slug, or description) to update',
-    }
-  );
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    error: 'Please provide at least one field (name, slug, description or parent_id) to update',
+  });
 
-export default { slugify, createCategorySchema, updateCategorySchema };
+export const categoryQuerySchema = z.object({
+  tree: z
+    .enum(['true', 'false'], { error: 'tree must be "true" or "false"' })
+    .optional()
+    .transform((value) => value === 'true'),
+});
+
+export default { slugify, createCategorySchema, updateCategorySchema, categoryQuerySchema };

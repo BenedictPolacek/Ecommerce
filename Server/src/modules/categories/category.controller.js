@@ -1,13 +1,15 @@
 import { catchAsync } from '../../utils/catchAsync.js';
 import { categoryService } from './category.service.js';
+import { categoryQuerySchema } from './category.validation.js';
 
 export const categoryController = {
   /**
    * List all categories (Public)
-   * GET /api/categories
+   * GET /api/categories?tree=true
    */
   getAll: catchAsync(async (req, res) => {
-    const categories = await categoryService.getAllCategories();
+    const query = categoryQuerySchema.parse(req.query);
+    const categories = await categoryService.getAllCategories(query);
     res.status(200).json({
       success: true,
       count: categories.length,
