@@ -49,8 +49,62 @@ describe('Products', () => {
     const list = await api().get('/api/products');
     expect(list.body.data.products).toHaveLength(0);
 
-    const one = await api().get(`/api/products/${product.id}`);
+    const one = await api().get(`/api/products/${product.id}`).set(authHeader(token));
     expect(one.body.data.is_active).toBe(false);
+  });
+
+  describe('inactive products', () => {
+    let admin;
+    let hidden;
+
+    beforeEach(async () => {
+      admin = await createAdmin();
+      await createProduct(admin.token, { name: 'Visible' });
+      hidden = await createProduct(admin.token, { name: 'Hidden', is_active: false });
+    });
+
+    const names = (res) => res.body.data.products.map((p) => p.name);
+
+    it('ignores ?is_active=false for anonymous visitors', async () => {
+      const res = await api().get('/api/products?is_active=false');
+
+      expect(names(res)).toEqual(['Visible']);
+    });
+
+    it('ignores ?is_active=false for customers', async () => {
+      const customer = await createUser();
+
+      const res = await api().get('/api/products?is_active=false').set(authHeader(customer.token));
+
+      expect(names(res)).toEqual(['Visible']);
+    });
+
+    it('lets admins list inactive products', async () => {
+      const res = await api().get('/api/products?is_active=false').set(authHeader(admin.token));
+
+      expect(names(res)).toEqual(['Hidden']);
+    });
+
+    it('returns 404 for an inactive product to customers, by id and by slug', async () => {
+      const byId = await api().get(`/api/products/${hidden.id}`);
+      const bySlug = await api().get(`/api/products/${hidden.slug}`);
+
+      expect(byId.status).toBe(404);
+      expect(bySlug.status).toBe(404);
+    });
+
+    it('shows an inactive product to admins', async () => {
+      const res = await api().get(`/api/products/${hidden.id}`).set(authHeader(admin.token));
+
+      expect(res.status).toBe(200);
+    });
+
+    it('treats an invalid token as anonymous instead of failing', async () => {
+      const res = await api().get('/api/products').set(authHeader('not-a-real-token'));
+
+      expect(res.status).toBe(200);
+      expect(names(res)).toEqual(['Visible']);
+    });
   });
 
   it('answers an invalid query parameter with 400 instead of 500', async () => {

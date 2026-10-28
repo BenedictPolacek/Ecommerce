@@ -46,9 +46,16 @@ const getProductOrFail = async (id) => {
 };
 
 export const productService = {
-  async getAllProducts({ page = 1, limit = 20, search, category_id, is_active }) {
+  /**
+   * Only admins may filter by is_active; everyone else always gets active products.
+   * The parameter is ignored (not rejected) so hidden products are not even hinted at.
+   */
+  async getAllProducts(
+    { page = 1, limit = 20, search, category_id, is_active },
+    { isAdmin = false } = {}
+  ) {
     // is_active arrives as 'true' | 'false' | undefined (query schema keeps it as a string)
-    const isActiveFilter = is_active === undefined ? true : is_active === 'true';
+    const isActiveFilter = isAdmin && is_active !== undefined ? is_active === 'true' : true;
 
     const { products, total } = await productRepository.findAll({
       search,
@@ -66,13 +73,16 @@ export const productService = {
   },
 
   /**
-   * Retrieve a product by UUID or slug (/products/mechanical-keyboard)
+   * Retrieve a product by UUID or slug (/products/mechanical-keyboard).
+   * Inactive products only exist for admins; customers get the same 404 as for unknown ones.
    */
-  async getProductByIdOrSlug(idOrSlug) {
+  async getProductByIdOrSlug(idOrSlug, { isAdmin = false } = {}) {
     const product = isUuid(idOrSlug)
       ? await productRepository.findById(idOrSlug)
       : await productRepository.findBySlug(idOrSlug);
-    if (!product) throw new AppError('Product not found', 404);
+    if (!product || (!product.is_active && !isAdmin)) {
+      throw new AppError('Product not found', 404);
+    }
     return product;
   },
 

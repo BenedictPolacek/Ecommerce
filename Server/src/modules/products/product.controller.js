@@ -2,10 +2,13 @@ import { productService } from './product.service.js';
 import { productQuerySchema } from './product.validation.js';
 import { catchAsync } from '../../utils/catchAsync.js';
 
+// Set by optionalAuthenticate on public routes
+const isAdmin = (req) => req.user?.role === 'admin';
+
 export const productController = {
   getAll: catchAsync(async (req, res) => {
     const query = productQuerySchema.parse(req.query);
-    const products = await productService.getAllProducts(query);
+    const products = await productService.getAllProducts(query, { isAdmin: isAdmin(req) });
 
     res.status(200).json({
       success: true,
@@ -17,7 +20,9 @@ export const productController = {
    * GET /api/products/:idOrSlug
    */
   getOne: catchAsync(async (req, res) => {
-    const product = await productService.getProductByIdOrSlug(req.params.idOrSlug);
+    const product = await productService.getProductByIdOrSlug(req.params.idOrSlug, {
+      isAdmin: isAdmin(req),
+    });
 
     res.status(200).json({
       success: true,
