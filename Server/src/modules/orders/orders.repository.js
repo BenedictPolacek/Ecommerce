@@ -16,15 +16,18 @@ export const orderRepository = {
       totalCents,
       vatRatePercent,
       shippingAddress,
+      billingAddress,
       paymentProvider,
       paymentId,
     }
   ) => {
     const db = client || pool;
+    // order_number and currency are filled in by column defaults
     const { rows } = await db.query(
       `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents,
-                           vat_rate_percent, shipping_address, payment_provider, payment_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                           vat_rate_percent, shipping_address, billing_address,
+                           payment_provider, payment_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         userId,
@@ -33,7 +36,8 @@ export const orderRepository = {
         shippingFeeCents,
         totalCents,
         vatRatePercent,
-        typeof shippingAddress === 'object' ? JSON.stringify(shippingAddress) : shippingAddress,
+        JSON.stringify(shippingAddress),
+        JSON.stringify(billingAddress),
         paymentProvider || null,
         paymentId || null,
       ]
@@ -70,6 +74,13 @@ export const orderRepository = {
 
   findOrderById: async (orderId) => {
     const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+    return rows[0] || null;
+  },
+
+  findOrderByNumber: async (orderNumber) => {
+    const { rows } = await pool.query('SELECT * FROM orders WHERE order_number = $1', [
+      orderNumber,
+    ]);
     return rows[0] || null;
   },
 

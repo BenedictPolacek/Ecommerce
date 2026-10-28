@@ -42,12 +42,15 @@ export const ordersController = {
   }),
 
   /**
-   * Get specific order details by ID
-   * GET /api/orders/:id
+   * Get specific order details by ID or order number
+   * GET /api/orders/:idOrNumber
    */
   getOrder: catchAsync(async (req, res) => {
-    const id = req.idParam || req.params.id;
-    const order = await orderService.getOrderById(id, req.user.id, req.user.role);
+    const order = await orderService.getOrderByIdOrNumber(
+      req.params.idOrNumber,
+      req.user.id,
+      req.user.role
+    );
     res.status(200).json({
       success: true,
       data: { order },

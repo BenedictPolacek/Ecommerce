@@ -18,8 +18,9 @@ router.get('/', controller.listMyOrders);
 // Admin: Get all orders across the platform
 router.get('/all', authorize('admin'), controller.listAllOrders);
 
-// Get single order details (owner or admin)
-router.get('/:id', validateIdParam, controller.getOrder);
+// Get single order details by UUID or order number (owner or admin).
+// authorize() loads the live role; authenticate alone does not set req.user.role.
+router.get('/:idOrNumber', authorize('customer', 'admin'), controller.getOrder);
 
 // Admin: Update order status
 router.patch(

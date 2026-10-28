@@ -140,6 +140,7 @@ describe('Cart and checkout', () => {
       .get(`/api/orders/${order.body.data.order.id}`)
       .set(authHeader(other.token));
 
-    expect(res.status).toBe(403);
+    // 404, not 403: a 403 would reveal that the order exists
+    expect(res.status).toBe(404);
   });
 });

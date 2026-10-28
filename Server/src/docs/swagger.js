@@ -464,7 +464,13 @@ export const swaggerSpec = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid', example: 'c1f7dfaa-3475-430c-b26a-9359332ea679' },
+          order_number: {
+            type: 'string',
+            example: 'ORD-2026-001001',
+            description: 'Human-readable, assigned by the database',
+          },
           user_id: { type: 'string', format: 'uuid' },
+          currency: { type: 'string', example: 'EUR', description: 'ISO 4217 code' },
           status: {
             type: 'string',
             enum: [
@@ -498,6 +504,10 @@ export const swaggerSpec = {
               'VAT rate at the time of the order; null for orders before this field existed',
           },
           shipping_address: { $ref: '#/components/schemas/CreateAddressRequest' },
+          billing_address: {
+            $ref: '#/components/schemas/CreateAddressRequest',
+            description: 'Snapshot; equals shipping_address unless a billing address was given',
+          },
           items: {
             type: 'array',
             items: { $ref: '#/components/schemas/OrderItem' },
@@ -513,6 +523,16 @@ export const swaggerSpec = {
         properties: {
           addressId: { type: 'string', format: 'uuid', description: 'Existing user address UUID' },
           shippingAddress: { $ref: '#/components/schemas/CreateAddressRequest' },
+          billingAddressId: {
+            type: 'string',
+            format: 'uuid',
+            description:
+              'Optional saved address for billing (takes precedence over billingAddress)',
+          },
+          billingAddress: {
+            $ref: '#/components/schemas/CreateAddressRequest',
+            description: 'Optional. Without billingAddress/billingAddressId, billing = shipping',
+          },
           paymentProvider: { type: 'string', example: 'stripe' },
           paymentId: { type: 'string', example: 'pi_3MtwBwLkdIwHu7ix28a3tqPa' },
         },
@@ -1646,16 +1666,17 @@ export const swaggerSpec = {
     '/orders/{id}': {
       get: {
         tags: ['Orders'],
-        summary: 'Get single order details by UUID',
-        description: 'Available to the order owner or users with admin role.',
+        summary: 'Get single order details by UUID or order number',
+        description:
+          "Available to the order owner or admins. Someone else's order returns 404 (not 403), so sequential order numbers cannot be probed.",
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         parameters: [
           {
             name: 'id',
             in: 'path',
             required: true,
-            schema: { type: 'string', format: 'uuid' },
-            description: 'Order UUID',
+            schema: { type: 'string' },
+            description: 'Order UUID or order number, e.g. ORD-2026-001001',
           },
         ],
         responses: {
@@ -1673,9 +1694,7 @@ export const swaggerSpec = {
               },
             },
           },
-          400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
-          403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },
         },
       },

@@ -13,6 +13,9 @@ export const checkoutSchema = z
   .object({
     shippingAddress: shippingAddressSchema.optional(),
     addressId: z.uuid('Invalid address UUID').optional(),
+    // Optional: without one, the billing address is the shipping address
+    billingAddress: shippingAddressSchema.optional(),
+    billingAddressId: z.uuid('Invalid billing address UUID').optional(),
     paymentProvider: z.string().trim().max(50).optional(),
     paymentId: z.string().trim().max(255).optional(),
   })
