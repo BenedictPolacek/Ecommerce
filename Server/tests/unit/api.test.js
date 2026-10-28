@@ -103,7 +103,7 @@ describe('Validation Middleware', () => {
   it('POST /api/products should reject unauthenticated requests with 401', async () => {
     const res = await request(app).post('/api/products').send({
       name: 'Test Product',
-      price: 19.99,
+      price_cents: 1999,
     });
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);

@@ -8,19 +8,31 @@ export const orderRepository = {
    */
   createOrder: async (
     client,
-    { userId, subtotal, tax, shippingFee, total, shippingAddress, paymentProvider, paymentId }
+    {
+      userId,
+      subtotalCents,
+      taxCents,
+      shippingFeeCents,
+      totalCents,
+      vatRatePercent,
+      shippingAddress,
+      paymentProvider,
+      paymentId,
+    }
   ) => {
     const db = client || pool;
     const { rows } = await db.query(
-      `INSERT INTO orders (user_id, subtotal, tax, shipping_fee, total, shipping_address, payment_provider, payment_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents,
+                           vat_rate_percent, shipping_address, payment_provider, payment_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         userId,
-        subtotal,
-        tax || 0.0,
-        shippingFee || 0.0,
-        total,
+        subtotalCents,
+        taxCents,
+        shippingFeeCents,
+        totalCents,
+        vatRatePercent,
         typeof shippingAddress === 'object' ? JSON.stringify(shippingAddress) : shippingAddress,
         paymentProvider || null,
         paymentId || null,
@@ -40,14 +52,14 @@ export const orderRepository = {
     const insertedItems = [];
     for (const item of items) {
       const { rows } = await db.query(
-        `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity)
+        `INSERT INTO order_items (order_id, product_id, product_name, unit_price_cents, quantity)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
         [
           orderId,
           item.product_id || item.productId,
           item.product_name || item.name,
-          item.unit_price ?? item.price,
+          item.unit_price_cents,
           item.quantity,
         ]
       );

@@ -238,7 +238,11 @@ export const swaggerSpec = {
           slug: { type: 'string', example: 'wireless-mechanical-keyboard' },
           sku: { type: 'string', example: 'KB-WL-001' },
           description: { type: 'string', example: 'Compact 75% hot-swappable keyboard' },
-          price: { type: 'number', format: 'float', example: 99.99 },
+          price_cents: {
+            type: 'integer',
+            example: 9999,
+            description: 'Gross price incl. VAT in cents (9999 = 99.99 €)',
+          },
           stock_quantity: { type: 'integer', example: 45 },
           category_id: { type: 'string', format: 'uuid', nullable: true },
           category_name: { type: 'string', nullable: true, example: 'Computer Accessories' },
@@ -286,7 +290,7 @@ export const swaggerSpec = {
       },
       CreateProductRequest: {
         type: 'object',
-        required: ['name', 'price'],
+        required: ['name', 'price_cents'],
         properties: {
           name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
           slug: {
@@ -296,7 +300,7 @@ export const swaggerSpec = {
           },
           sku: { type: 'string', example: 'KB-WL-001' },
           description: { type: 'string', example: 'Compact 75% mechanical switches' },
-          price: { type: 'number', format: 'float', example: 99.99 },
+          price_cents: { type: 'integer', example: 9999, description: 'Gross price in cents' },
           stock_quantity: { type: 'integer', example: 45, default: 0 },
           category_id: { type: 'string', format: 'uuid', nullable: true },
           is_active: { type: 'boolean', default: true },
@@ -313,7 +317,7 @@ export const swaggerSpec = {
           },
           sku: { type: 'string', example: 'KB-WL-001-V2' },
           description: { type: 'string', example: 'Enhanced bluetooth support' },
-          price: { type: 'number', format: 'float', example: 109.99 },
+          price_cents: { type: 'integer', example: 10999 },
           stock_quantity: { type: 'integer', example: 30 },
           category_id: { type: 'string', format: 'uuid', nullable: true },
           is_active: { type: 'boolean' },
@@ -353,26 +357,36 @@ export const swaggerSpec = {
       CartItem: {
         type: 'object',
         properties: {
-          id: { type: 'string', format: 'uuid' },
+          cart_item_id: { type: 'string', format: 'uuid' },
+          cart_id: { type: 'string', format: 'uuid' },
           product_id: { type: 'string', format: 'uuid' },
-          name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
+          product_name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
           sku: { type: 'string', example: 'KB-WL-001' },
-          price: { type: 'number', example: 99.99 },
+          price_cents: { type: 'integer', example: 9999 },
           quantity: { type: 'integer', example: 2 },
-          subtotal: { type: 'number', example: 199.98 },
+          line_total_cents: { type: 'integer', example: 19998 },
           stock_quantity: { type: 'integer', example: 45 },
+          is_active: { type: 'boolean', example: true },
         },
       },
       Cart: {
         type: 'object',
+        description:
+          'Totals use the same calculation as checkout, so the customer sees the final price.',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          user_id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
           items: {
             type: 'array',
             items: { $ref: '#/components/schemas/CartItem' },
           },
-          subtotal: { type: 'number', example: 199.98 },
+          totalItems: { type: 'integer', example: 2 },
+          subtotalCents: { type: 'integer', example: 19998 },
+          shippingFeeCents: { type: 'integer', example: 0, description: 'Free from 50 € on' },
+          taxCents: { type: 'integer', example: 3193, description: 'VAT contained in totalCents' },
+          totalCents: { type: 'integer', example: 19998 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
         },
       },
       AddCartItemRequest: {
@@ -442,9 +456,8 @@ export const swaggerSpec = {
           order_id: { type: 'string', format: 'uuid' },
           product_id: { type: 'string', format: 'uuid' },
           product_name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
-          unit_price: { type: 'number', example: 99.99 },
+          unit_price_cents: { type: 'integer', example: 9999 },
           quantity: { type: 'integer', example: 2 },
-          subtotal: { type: 'number', example: 199.98 },
         },
       },
       Order: {
@@ -465,10 +478,25 @@ export const swaggerSpec = {
             ],
             example: 'pending',
           },
-          subtotal: { type: 'number', example: 199.98 },
-          tax: { type: 'number', example: 16.0 },
-          shipping_fee: { type: 'number', example: 5.0 },
-          total_amount: { type: 'number', example: 220.98 },
+          subtotal_cents: { type: 'integer', example: 2100 },
+          shipping_fee_cents: { type: 'integer', example: 499 },
+          total_cents: {
+            type: 'integer',
+            example: 2599,
+            description: 'subtotal_cents + shipping_fee_cents',
+          },
+          tax_cents: {
+            type: 'integer',
+            example: 415,
+            description: 'VAT contained in total_cents (not added on top)',
+          },
+          vat_rate_percent: {
+            type: 'integer',
+            nullable: true,
+            example: 19,
+            description:
+              'VAT rate at the time of the order; null for orders before this field existed',
+          },
           shipping_address: { $ref: '#/components/schemas/CreateAddressRequest' },
           items: {
             type: 'array',
@@ -481,14 +509,12 @@ export const swaggerSpec = {
       CheckoutRequest: {
         type: 'object',
         description:
-          'Provide either `addressId` for an existing address OR `shippingAddress` for a custom address.',
+          'Provide either `addressId` for an existing address OR `shippingAddress` for a custom address. Shipping fee and tax are always calculated by the server.',
         properties: {
           addressId: { type: 'string', format: 'uuid', description: 'Existing user address UUID' },
           shippingAddress: { $ref: '#/components/schemas/CreateAddressRequest' },
           paymentProvider: { type: 'string', example: 'stripe' },
           paymentId: { type: 'string', example: 'pi_3MtwBwLkdIwHu7ix28a3tqPa' },
-          shippingFee: { type: 'number', example: 5.0, default: 0 },
-          tax: { type: 'number', example: 16.0, default: 0 },
         },
       },
       UpdateOrderStatusRequest: {

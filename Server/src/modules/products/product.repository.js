@@ -1,13 +1,13 @@
 import pool from '../../config/db.js';
 
 const COLUMNS = `
-  p.id, p.name, p.slug, p.sku, p.description, p.price,
+  p.id, p.name, p.slug, p.sku, p.description, p.price_cents,
   p.stock_quantity, p.is_active, p.created_at, p.updated_at,
   p.category_id
 `;
 
 const RETURNING = `
-  id, name, slug, sku, description, price, stock_quantity, category_id, is_active,
+  id, name, slug, sku, description, price_cents, stock_quantity, category_id, is_active,
   created_at, updated_at
 `;
 
@@ -152,9 +152,18 @@ export const productRepository = {
   /**
    * Create a new product.
    */
-  async create({ name, slug, sku, description, price, stock_quantity, category_id, is_active }) {
+  async create({
+    name,
+    slug,
+    sku,
+    description,
+    price_cents,
+    stock_quantity,
+    category_id,
+    is_active,
+  }) {
     const query = `
-      INSERT INTO products (name, slug, sku, description, price, stock_quantity, category_id, is_active)
+      INSERT INTO products (name, slug, sku, description, price_cents, stock_quantity, category_id, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING ${RETURNING}
     `;
@@ -163,7 +172,7 @@ export const productRepository = {
       slug,
       sku ? sku.trim() : null,
       description ? description.trim() : null,
-      price,
+      price_cents,
       stock_quantity ?? 0,
       category_id ?? null,
       is_active ?? true,
@@ -178,7 +187,7 @@ export const productRepository = {
    */
   async update(
     id,
-    { name, slug, sku, description, price, stock_quantity, category_id, is_active }
+    { name, slug, sku, description, price_cents, stock_quantity, category_id, is_active }
   ) {
     const query = `
       UPDATE products
@@ -186,7 +195,7 @@ export const productRepository = {
         name           = COALESCE($1, name),
         sku            = COALESCE($2, sku),
         description    = COALESCE($3, description),
-        price          = COALESCE($4, price),
+        price_cents    = COALESCE($4, price_cents),
         stock_quantity = COALESCE($5, stock_quantity),
         category_id    = COALESCE($6, category_id),
         is_active      = COALESCE($7, is_active),
@@ -198,7 +207,7 @@ export const productRepository = {
       name !== undefined ? name.trim() : null,
       sku !== undefined ? (sku ? sku.trim() : null) : null,
       description !== undefined ? (description ? description.trim() : null) : null,
-      price !== undefined ? price : null,
+      price_cents !== undefined ? price_cents : null,
       stock_quantity !== undefined ? stock_quantity : null,
       category_id !== undefined ? category_id : null,
       is_active !== undefined ? is_active : null,

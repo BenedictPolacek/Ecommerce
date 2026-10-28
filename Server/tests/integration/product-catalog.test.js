@@ -24,7 +24,7 @@ describe('Product slug', () => {
     const res = await api()
       .post('/api/products')
       .set(authHeader(admin.token))
-      .send({ name: 'Other', slug: 'hoodie', price: 10 });
+      .send({ name: 'Other', slug: 'hoodie', price_cents: 1000 });
 
     expect(res.status).toBe(409);
   });

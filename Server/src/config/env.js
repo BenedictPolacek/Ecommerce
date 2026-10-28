@@ -25,6 +25,11 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
 
+  // Pricing. Amounts in cents; product prices include VAT (EU gross prices)
+  VAT_RATE_PERCENT: z.coerce.number().int().min(0).max(100).default(19),
+  SHIPPING_FEE_CENTS: z.coerce.number().int().min(0).default(499),
+  FREE_SHIPPING_THRESHOLD_CENTS: z.coerce.number().int().min(0).default(5000),
+
   // Only used by `npm run db:seed`, which refuses to run in production
   SEED_ADMIN_EMAIL: z.email().default('admin@example.com'),
   SEED_ADMIN_PASSWORD: z.string().min(8).default('admin12345'),
@@ -65,6 +70,11 @@ export const parseEnv = (rawEnv) => {
     },
     bcrypt: {
       saltRounds: env.BCRYPT_SALT_ROUNDS,
+    },
+    pricing: {
+      vatRatePercent: env.VAT_RATE_PERCENT,
+      shippingFeeCents: env.SHIPPING_FEE_CENTS,
+      freeShippingThresholdCents: env.FREE_SHIPPING_THRESHOLD_CENTS,
     },
     seed: {
       adminEmail: env.SEED_ADMIN_EMAIL,

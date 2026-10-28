@@ -1,6 +1,7 @@
 import { AppError } from '../../utils/AppError.js';
 import { cartRepository } from './cart.repository.js';
 import { productRepository } from '../products/product.repository.js';
+import { calculateOrderTotals } from '../orders/pricing.js';
 
 export const cartService = {
   /**
@@ -10,15 +11,24 @@ export const cartService = {
     const cart = await cartRepository.findOrCreateCart(userId);
     const items = await cartRepository.getCartItems(cart.id);
 
-    const totalAmount = items.reduce((acc, item) => acc + Number(item.line_total || 0), 0);
-    const totalItems = items.reduce((acc, item) => acc + Number(item.quantity || 0), 0);
+    const subtotalCents = items.reduce((acc, item) => acc + item.line_total_cents, 0);
+    const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+    // Same calculation as checkout, so the cart shows exactly what the customer will pay.
+    // An empty cart has nothing to ship.
+    const { shippingFeeCents, taxCents, totalCents } =
+      items.length > 0
+        ? calculateOrderTotals(subtotalCents)
+        : { shippingFeeCents: 0, taxCents: 0, totalCents: 0 };
 
     return {
       id: cart.id,
       userId: cart.user_id,
       items,
       totalItems,
-      totalAmount: Math.round(totalAmount * 100) / 100,
+      subtotalCents,
+      shippingFeeCents,
+      taxCents,
+      totalCents,
       createdAt: cart.created_at,
       updatedAt: cart.updated_at,
     };

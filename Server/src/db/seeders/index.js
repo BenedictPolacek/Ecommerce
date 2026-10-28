@@ -31,7 +31,7 @@ export async function seed() {
     for (const product of products) {
       // Conflicts on sku or slug both mean "already seeded"
       const { rows } = await client.query(
-        `INSERT INTO products (category_id, name, slug, sku, description, price, stock_quantity)
+        `INSERT INTO products (category_id, name, slug, sku, description, price_cents, stock_quantity)
          VALUES ((SELECT id FROM categories WHERE slug = $1), $2, $3, $4, $5, $6, $7)
          ON CONFLICT DO NOTHING
          RETURNING id`,
@@ -41,7 +41,7 @@ export async function seed() {
           slugify(product.name),
           product.sku,
           product.description,
-          product.price,
+          product.price_cents,
           product.stock_quantity,
         ]
       );

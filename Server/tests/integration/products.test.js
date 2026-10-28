@@ -22,7 +22,7 @@ describe('Products', () => {
     const res = await api()
       .post('/api/products')
       .set(authHeader(token))
-      .send({ name: 'Hack', price: 1 });
+      .send({ name: 'Hack', price_cents: 100 });
 
     expect(res.status).toBe(403);
   });
@@ -34,7 +34,7 @@ describe('Products', () => {
     const res = await api()
       .post('/api/products')
       .set(authHeader(token))
-      .send({ name: 'Other', price: 5, sku: 'DUP-1' });
+      .send({ name: 'Other', price_cents: 500, sku: 'DUP-1' });
 
     expect(res.status).toBe(409);
   });

@@ -38,10 +38,10 @@ export const cartRepository = {
         p.id AS product_id,
         p.name AS product_name,
         p.sku,
-        p.price,
+        p.price_cents,
         p.stock_quantity,
         p.is_active,
-        ROUND((ci.quantity * p.price)::numeric, 2) AS line_total
+        ci.quantity * p.price_cents AS line_total_cents
       FROM cart_items ci
       JOIN products p ON ci.product_id = p.id
       WHERE ci.cart_id = $1

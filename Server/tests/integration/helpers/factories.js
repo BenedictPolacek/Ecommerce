@@ -41,7 +41,7 @@ export async function createProduct(adminToken, overrides = {}) {
   const res = await api()
     .post('/api/products')
     .set(authHeader(adminToken))
-    .send({ name: 'Test Product', price: 19.99, stock_quantity: 10, ...overrides });
+    .send({ name: 'Test Product', price_cents: 1999, stock_quantity: 10, ...overrides });
 
   if (res.status !== 201) {
     throw new Error(`createProduct failed (${res.status}): ${res.body.message}`);
