@@ -4,6 +4,7 @@ import { orderRepository } from './orders.repository.js';
 import { cartRepository } from '../cart/cart.repository.js';
 import { calculateOrderTotals } from './pricing.js';
 import { isUuid } from '../../utils/uuid.js';
+import { paginationMeta, toOffset } from '../../utils/pagination.js';
 
 // ORD-2026-001001 (the counter can grow beyond 6 digits)
 const ORDER_NUMBER_REGEX = /^ORD-\d{4}-\d{6,}$/;
@@ -24,6 +25,16 @@ const resolveAddress = async (client, userId, { address, addressId, label }) => 
   }
   const { address_line1, address_line2, city, state, postal_code, country } = rows[0];
   return { address_line1, address_line2, city, state, postal_code, country };
+};
+
+const listOrders = async ({ userId, status, page, limit }) => {
+  const { orders, total } = await orderRepository.findOrderSummaries({
+    userId,
+    status,
+    limit,
+    offset: toOffset({ page, limit }),
+  });
+  return { orders, pagination: paginationMeta({ page, limit }, total) };
 };
 
 export const orderService = {
@@ -136,31 +147,17 @@ export const orderService = {
   },
 
   /**
-   * List all orders for the authenticated user
+   * One page of the authenticated user's orders (summaries, newest first)
    */
-  async getMyOrders(userId) {
-    const orders = await orderRepository.findOrdersByUser(userId);
-    const ordersWithItems = await Promise.all(
-      orders.map(async (order) => {
-        const items = await orderRepository.findOrderItems(order.id);
-        return { ...order, items };
-      })
-    );
-    return ordersWithItems;
+  async getMyOrders(userId, query) {
+    return listOrders({ ...query, userId });
   },
 
   /**
-   * List all orders in the system (Admin only)
+   * One page of all orders in the system (Admin only)
    */
-  async getAllOrders() {
-    const orders = await orderRepository.findAllOrders();
-    const ordersWithItems = await Promise.all(
-      orders.map(async (order) => {
-        const items = await orderRepository.findOrderItems(order.id);
-        return { ...order, items };
-      })
-    );
-    return ordersWithItems;
+  async getAllOrders(query) {
+    return listOrders(query);
   },
 
   /**

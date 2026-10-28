@@ -148,4 +148,73 @@ describe('Orders', () => {
       expect(res.body.data.order.billing_address.city).toBe('Munich');
     });
   });
+
+  describe('order lists', () => {
+    const listMine = (user, query = '') =>
+      api().get(`/api/orders${query}`).set(authHeader(user.token));
+    const listAll = (query = '') =>
+      api().get(`/api/orders/all${query}`).set(authHeader(admin.token));
+    const setStatus = (order, status) =>
+      api().patch(`/api/orders/${order.id}/status`).set(authHeader(admin.token)).send({ status });
+
+    it('returns summaries with item_count instead of items', async () => {
+      const order = await placeOrder(customer);
+
+      const res = await listMine(customer);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.orders).toEqual([
+        expect.objectContaining({ order_number: order.order_number, item_count: 1 }),
+      ]);
+      expect(res.body.data.orders[0]).not.toHaveProperty('items');
+    });
+
+    it('only lists the customer’s own orders', async () => {
+      await placeOrder(customer);
+      const other = await createUser();
+      await placeOrder(other);
+
+      const res = await listMine(customer);
+
+      expect(res.body.data.pagination.total).toBe(1);
+    });
+
+    it('paginates, newest first', async () => {
+      const first = await placeOrder(customer);
+      const second = await placeOrder(customer);
+      const third = await placeOrder(customer);
+
+      const page1 = await listMine(customer, '?limit=2');
+      const page2 = await listMine(customer, '?limit=2&page=2');
+
+      expect(page1.body.data.orders.map((o) => o.id)).toEqual([third.id, second.id]);
+      expect(page2.body.data.orders.map((o) => o.id)).toEqual([first.id]);
+      expect(page1.body.data.pagination).toEqual({ page: 1, limit: 2, total: 3, totalPages: 2 });
+    });
+
+    it('lets admins list all orders and filter by status', async () => {
+      const paid = await placeOrder(customer);
+      const other = await createUser();
+      await placeOrder(other);
+      await setStatus(paid, 'paid');
+
+      const all = await listAll();
+      const onlyPaid = await listAll('?status=paid');
+
+      expect(all.body.data.pagination.total).toBe(2);
+      expect(onlyPaid.body.data.orders.map((o) => o.id)).toEqual([paid.id]);
+    });
+
+    it('rejects an unknown status with 400', async () => {
+      const res = await listAll('?status=lost');
+
+      expect(res.status).toBe(400);
+    });
+
+    it('does not let customers use the admin list', async () => {
+      const res = await api().get('/api/orders/all').set(authHeader(customer.token));
+
+      expect(res.status).toBe(403);
+    });
+  });
 });
