@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuery } from '../../utils/pagination.js';
 import { SLUG_REGEX } from '../../utils/slug.js';
 import { requiredNumber, requiredString } from '../../utils/zod.js';
 
@@ -126,23 +127,11 @@ export const imageParamsSchema = z.object({
 
 // ─── Query params ─────────────────────────────────────────────────────────────
 
-// Zod 4 returns .default() values as-is (no transform), so defaults are numbers here
 export const productQuerySchema = z.object({
   search: z.string().trim().optional(),
   category_id: z.uuid('category_id must be a valid UUID').optional(),
   is_active: z.enum(['true', 'false'], { error: 'is_active must be "true" or "false"' }).optional(),
-  page: z
-    .string()
-    .regex(/^\d+$/, 'page must be a positive integer')
-    .transform(Number)
-    .refine((n) => n >= 1, 'page must be at least 1')
-    .default(1),
-  limit: z
-    .string()
-    .regex(/^\d+$/, 'limit must be a positive integer')
-    .transform(Number)
-    .refine((n) => n >= 1 && n <= 100, 'limit must be between 1 and 100')
-    .default(20),
+  ...paginationQuery,
 });
 
 export default {

@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/AppError.js';
+import { paginationMeta, toOffset } from '../../utils/pagination.js';
 import { slugify } from '../../utils/slug.js';
 import { isUuid } from '../../utils/uuid.js';
 import { productRepository } from './product.repository.js';
@@ -63,12 +64,12 @@ export const productService = {
       // public listings default to active products only
       is_active: isActiveFilter,
       limit,
-      offset: (page - 1) * limit,
+      offset: toOffset({ page, limit }),
     });
 
     return {
       products,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      pagination: paginationMeta({ page, limit }, total),
     };
   },
 

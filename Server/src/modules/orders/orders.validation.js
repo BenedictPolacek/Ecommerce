@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuery } from '../../utils/pagination.js';
 
 export const shippingAddressSchema = z.object({
   address_line1: z.string().trim().min(1, 'Address line 1 is required').max(255),
@@ -35,6 +36,11 @@ export const orderStatusEnum = z.enum([
 
 export const updateOrderStatusSchema = z.object({
   status: orderStatusEnum,
+});
+
+export const orderListQuerySchema = z.object({
+  status: orderStatusEnum.optional(),
+  ...paginationQuery,
 });
 
 export const orderIdParamSchema = z.object({

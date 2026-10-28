@@ -1,3 +1,24 @@
+// Shared by GET /orders and GET /orders/all
+const ORDER_LIST_PARAMETERS = [
+  {
+    name: 'status',
+    in: 'query',
+    required: false,
+    schema: {
+      type: 'string',
+      enum: ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    },
+    description: 'Only orders with this status',
+  },
+  { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+  {
+    name: 'limit',
+    in: 'query',
+    required: false,
+    schema: { type: 'integer', default: 20, maximum: 100 },
+  },
+];
+
 export const swaggerSpec = {
   openapi: '3.0.3',
   info: {
@@ -341,15 +362,50 @@ export const swaggerSpec = {
                 type: 'array',
                 items: { $ref: '#/components/schemas/Product' },
               },
-              pagination: {
-                type: 'object',
-                properties: {
-                  page: { type: 'integer', example: 1 },
-                  limit: { type: 'integer', example: 20 },
-                  total: { type: 'integer', example: 1 },
-                  totalPages: { type: 'integer', example: 1 },
-                },
+              pagination: { $ref: '#/components/schemas/Pagination' },
+            },
+          },
+        },
+      },
+      Pagination: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 1 },
+          totalPages: { type: 'integer', example: 1 },
+        },
+      },
+      OrderSummary: {
+        type: 'object',
+        description: 'Order without items; GET /orders/{id} returns the full order',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          order_number: { type: 'string', example: 'ORD-2026-001001' },
+          user_id: { type: 'string', format: 'uuid' },
+          status: { type: 'string', example: 'paid' },
+          currency: { type: 'string', example: 'EUR' },
+          subtotal_cents: { type: 'integer', example: 2100 },
+          shipping_fee_cents: { type: 'integer', example: 499 },
+          tax_cents: { type: 'integer', example: 415 },
+          total_cents: { type: 'integer', example: 2599 },
+          item_count: { type: 'integer', example: 2, description: 'Number of units ordered' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      OrderListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: {
+            type: 'object',
+            properties: {
+              orders: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/OrderSummary' },
               },
+              pagination: { $ref: '#/components/schemas/Pagination' },
             },
           },
         },
@@ -1611,26 +1667,19 @@ export const swaggerSpec = {
       },
       get: {
         tags: ['Orders'],
-        summary: 'List order history for current user',
+        summary: 'List order history for current user (paginated, newest first)',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: ORDER_LIST_PARAMETERS,
         responses: {
           200: {
-            description: 'User order history',
+            description: 'One page of the user’s order summaries',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Order' },
-                    },
-                  },
-                },
+                schema: { $ref: '#/components/schemas/OrderListResponse' },
               },
             },
           },
+          400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
         },
       },
@@ -1638,26 +1687,19 @@ export const swaggerSpec = {
     '/orders/all': {
       get: {
         tags: ['Orders'],
-        summary: 'List all platform orders (Admin only)',
+        summary: 'List all platform orders (Admin only, paginated, newest first)',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: ORDER_LIST_PARAMETERS,
         responses: {
           200: {
-            description: 'All system orders',
+            description: 'One page of order summaries',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Order' },
-                    },
-                  },
-                },
+                schema: { $ref: '#/components/schemas/OrderListResponse' },
               },
             },
           },
+          400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
         },
