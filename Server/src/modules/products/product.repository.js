@@ -1,12 +1,33 @@
 import pool from '../../config/db.js';
 
+const COLUMNS = `
+  p.id, p.name, p.slug, p.sku, p.description, p.price,
+  p.stock_quantity, p.is_active, p.created_at, p.updated_at,
+  p.category_id
+`;
+
+const RETURNING = `
+  id, name, slug, sku, description, price, stock_quantity, category_id, is_active,
+  created_at, updated_at
+`;
+
+/**
+ * Turns user input into a safe prefix tsquery: "Mech keyb!" → "mech:* & keyb:*".
+ * Only letters and digits survive, so tsquery operators in the input can never cause syntax errors.
+ * Returns null if nothing searchable is left.
+ */
+export const toPrefixTsQuery = (search) => {
+  const words = search.toLowerCase().match(/[\p{L}\p{N}]+/gu);
+  return words ? words.map((word) => `${word}:*`).join(' & ') : null;
+};
+
 export const productRepository = {
   /**
    * Find all products with optional filtering and pagination.
-   * Joins categories table to include category name.
+   * Joins categories table to include category name, plus the primary image.
    *
    * @param {Object} options
-   * @param {string}  [options.search]      - Partial match on product name
+   * @param {string}  [options.search]      - Full-text search on name and description (prefix match)
    * @param {string}  [options.category_id] - Filter by category UUID, including its subcategories
    * @param {boolean} [options.is_active]   - Filter by active status (default: true for public)
    * @param {number}  [options.limit]       - Max rows to return
@@ -16,10 +37,15 @@ export const productRepository = {
     const conditions = [];
     const values = [];
     let idx = 1;
+    let orderBy = 'p.created_at DESC';
 
-    if (search !== undefined) {
-      conditions.push(`p.name ILIKE $${idx++}`);
-      values.push(`%${search}%`);
+    const tsQuery = search !== undefined ? toPrefixTsQuery(search) : null;
+    if (tsQuery) {
+      const searchIdx = idx++;
+      conditions.push(`p.search_vector @@ to_tsquery('english', $${searchIdx})`);
+      values.push(tsQuery);
+      // Best matches first (name hits weigh more than description hits)
+      orderBy = `ts_rank(p.search_vector, to_tsquery('english', $${searchIdx})) DESC, ${orderBy}`;
     }
     if (category_id !== undefined) {
       // Include products of all subcategories (Clothing also lists Men → Shirts)
@@ -44,17 +70,23 @@ export const productRepository = {
     const countResult = await pool.query(`SELECT COUNT(*) FROM products p ${where}`, values);
     const total = parseInt(countResult.rows[0].count, 10);
 
-    // Data query
+    // Data query. LATERAL runs the image subquery once per product row.
     const query = `
       SELECT
-        p.id, p.name, p.sku, p.description, p.price,
-        p.stock_quantity, p.is_active, p.created_at, p.updated_at,
-        p.category_id,
-        c.name AS category_name
+        ${COLUMNS},
+        c.name AS category_name,
+        img.primary_image
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT json_build_object('url', pi.url, 'alt_text', pi.alt_text) AS primary_image
+        FROM product_images pi
+        WHERE pi.product_id = p.id
+        ORDER BY pi.sort_order
+        LIMIT 1
+      ) img ON TRUE
       ${where}
-      ORDER BY p.created_at DESC
+      ORDER BY ${orderBy}
       LIMIT $${idx++} OFFSET $${idx++}
     `;
     const result = await pool.query(query, [...values, limit, offset]);
@@ -63,21 +95,40 @@ export const productRepository = {
   },
 
   /**
-   * Find a single product by UUID, joined with its category name.
+   * Find a single product by UUID or slug, joined with its category name and all images.
+   * `column` is only ever 'id' or 'slug' from findById/findBySlug, never user input.
    */
-  async findById(id) {
+  async findOne(column, value) {
     const query = `
       SELECT
-        p.id, p.name, p.sku, p.description, p.price,
-        p.stock_quantity, p.is_active, p.created_at, p.updated_at,
-        p.category_id,
-        c.name AS category_name
+        ${COLUMNS},
+        c.name AS category_name,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', pi.id, 'url', pi.url, 'alt_text', pi.alt_text, 'sort_order', pi.sort_order
+              ) ORDER BY pi.sort_order
+            )
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+          ),
+          '[]'::json
+        ) AS images
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.id = $1
+      WHERE p.${column} = $1
     `;
-    const result = await pool.query(query, [id]);
+    const result = await pool.query(query, [value]);
     return result.rows[0] || null;
+  },
+
+  findById(id) {
+    return this.findOne('id', id);
+  },
+
+  findBySlug(slug) {
+    return this.findOne('slug', slug);
   },
 
   /**
@@ -90,16 +141,26 @@ export const productRepository = {
   },
 
   /**
+   * Slugs that are taken by "base" itself or "base-<n>" (to pick the next free suffix).
+   */
+  async findSlugsStartingWith(base) {
+    const query = `SELECT slug FROM products WHERE slug = $1 OR slug LIKE $2`;
+    const result = await pool.query(query, [base, `${base}-%`]);
+    return result.rows.map((row) => row.slug);
+  },
+
+  /**
    * Create a new product.
    */
-  async create({ name, sku, description, price, stock_quantity, category_id, is_active }) {
+  async create({ name, slug, sku, description, price, stock_quantity, category_id, is_active }) {
     const query = `
-      INSERT INTO products (name, sku, description, price, stock_quantity, category_id, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, name, sku, description, price, stock_quantity, category_id, is_active, created_at, updated_at
+      INSERT INTO products (name, slug, sku, description, price, stock_quantity, category_id, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING ${RETURNING}
     `;
     const values = [
       name.trim(),
+      slug,
       sku ? sku.trim() : null,
       description ? description.trim() : null,
       price,
@@ -115,7 +176,10 @@ export const productRepository = {
    * Update product fields — only provided (non-undefined) fields are changed.
    * Uses COALESCE to keep existing values for omitted fields.
    */
-  async update(id, { name, sku, description, price, stock_quantity, category_id, is_active }) {
+  async update(
+    id,
+    { name, slug, sku, description, price, stock_quantity, category_id, is_active }
+  ) {
     const query = `
       UPDATE products
       SET
@@ -125,9 +189,10 @@ export const productRepository = {
         price          = COALESCE($4, price),
         stock_quantity = COALESCE($5, stock_quantity),
         category_id    = COALESCE($6, category_id),
-        is_active      = COALESCE($7, is_active)
-      WHERE id = $8
-      RETURNING id, name, sku, description, price, stock_quantity, category_id, is_active, created_at, updated_at
+        is_active      = COALESCE($7, is_active),
+        slug           = COALESCE($8, slug)
+      WHERE id = $9
+      RETURNING ${RETURNING}
     `;
     const values = [
       name !== undefined ? name.trim() : null,
@@ -137,6 +202,7 @@ export const productRepository = {
       stock_quantity !== undefined ? stock_quantity : null,
       category_id !== undefined ? category_id : null,
       is_active !== undefined ? is_active : null,
+      slug ?? null,
       id,
     ];
     const result = await pool.query(query, values);

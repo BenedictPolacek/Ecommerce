@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { productController } from './product.controller.js';
 import { authenticate, authorize } from '../../middleware/auth.js';
-import validate, { validateIdParam } from '../../middleware/validate.js';
+import validate, { validateIdParam, validateParams } from '../../middleware/validate.js';
 import {
+  addImageSchema,
   createProductSchema,
+  imageParamsSchema,
+  reorderImagesSchema,
   updateProductSchema,
   updateStockSchema,
 } from './product.validation.js';
@@ -11,7 +14,8 @@ import {
 const router = Router();
 
 router.get('/', productController.getAll);
-router.get('/:id', validateIdParam, productController.getOne);
+// Accepts a UUID or a slug, so no UUID validation here
+router.get('/:idOrSlug', productController.getOne);
 
 router.post(
   '/',
@@ -37,5 +41,30 @@ router.patch(
   productController.updateStock
 );
 router.delete('/:id', authenticate, authorize('admin'), validateIdParam, productController.delete);
+
+// Images (sub-resource of a product)
+router.post(
+  '/:id/images',
+  authenticate,
+  authorize('admin'),
+  validateIdParam,
+  validate(addImageSchema),
+  productController.addImage
+);
+router.put(
+  '/:id/images/order',
+  authenticate,
+  authorize('admin'),
+  validateIdParam,
+  validate(reorderImagesSchema),
+  productController.reorderImages
+);
+router.delete(
+  '/:id/images/:imageId',
+  authenticate,
+  authorize('admin'),
+  validateParams(imageParamsSchema),
+  productController.deleteImage
+);
 
 export default router;

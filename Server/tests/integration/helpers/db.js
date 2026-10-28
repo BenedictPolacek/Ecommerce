@@ -5,6 +5,7 @@ const TABLES = [
   'order_items',
   'orders',
   'cart_items',
+  'product_images',
   'carts',
   'products',
   'categories',
