@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { productController } from './product.controller.js';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, authorize, optionalAuthenticate } from '../../middleware/auth.js';
 import validate, { validateIdParam, validateParams } from '../../middleware/validate.js';
 import {
   addImageSchema,
@@ -13,9 +13,10 @@ import {
 
 const router = Router();
 
-router.get('/', productController.getAll);
+// Public, but admins (optional login) also see inactive products
+router.get('/', optionalAuthenticate, productController.getAll);
 // Accepts a UUID or a slug, so no UUID validation here
-router.get('/:idOrSlug', productController.getOne);
+router.get('/:idOrSlug', optionalAuthenticate, productController.getOne);
 
 router.post(
   '/',

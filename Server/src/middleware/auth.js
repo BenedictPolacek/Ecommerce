@@ -3,22 +3,25 @@ import { config } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 import { userRepository } from '../modules/users/user.repository.js';
 
+const getToken = (req) => {
+  // 1. Check for token in httpOnly cookie
+  if (req.cookies && req.cookies.token) {
+    return req.cookies.token;
+  }
+  // 2. Fallback to Authorization: Bearer <token> header (for mobile/Postman)
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return req.headers.authorization.split(' ')[1];
+  }
+  return null;
+};
+
 /**
  * Middleware to authenticate requests via JWT Bearer token.
  * Populates `req.user` with `{ id, email }` from the token.
  * Role is NOT set here — it is fetched live from the DB inside `authorize()`.
  */
 export const authenticate = (req, res, next) => {
-  let token;
-
-  // 1. Check for token in httpOnly cookie
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  }
-  // 2. Fallback to Authorization: Bearer <token> header (for mobile/Postman)
-  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
+  const token = getToken(req);
 
   if (!token) {
     return next(new AppError('Authentication token missing. Please log in.', 401));
@@ -36,6 +39,34 @@ export const authenticate = (req, res, next) => {
       return next(new AppError('Authentication token has expired. Please log in again.', 401));
     }
     return next(new AppError('Invalid authentication token', 401));
+  }
+};
+
+/**
+ * For public routes that show more to admins (e.g. inactive products).
+ * With a valid token, sets req.user incl. the live role from the DB; otherwise continues anonymously.
+ * An invalid or expired token is treated as anonymous, so a stale cookie never blocks
+ * browsing the catalog, and it can only ever grant fewer rights, never more.
+ */
+export const optionalAuthenticate = async (req, res, next) => {
+  const token = getToken(req);
+  if (!token) return next();
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwt.secret);
+  } catch {
+    return next();
+  }
+
+  try {
+    const user = await userRepository.findById(decoded.id);
+    if (user) {
+      req.user = { id: user.id, email: user.email, role: user.role };
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -73,4 +104,4 @@ export const authorize = (...roles) => {
   };
 };
 
-export default { authenticate, authorize };
+export default { authenticate, optionalAuthenticate, authorize };

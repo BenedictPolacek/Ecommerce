@@ -891,7 +891,8 @@ export const swaggerSpec = {
             in: 'query',
             required: false,
             schema: { type: 'string', enum: ['true', 'false'] },
-            description: 'Filter by active status (defaults to true for public)',
+            description:
+              'Admins only: filter by active status. Ignored for everyone else, who always gets active products.',
           },
         ],
         responses: {
@@ -957,7 +958,8 @@ export const swaggerSpec = {
             in: 'path',
             required: true,
             schema: { type: 'string' },
-            description: 'Product UUID or slug, e.g. mechanical-keyboard',
+            description:
+              'Product UUID or slug, e.g. mechanical-keyboard. Inactive products return 404 unless the caller is an admin.',
           },
         ],
         responses: {
