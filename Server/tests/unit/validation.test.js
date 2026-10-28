@@ -20,12 +20,14 @@ describe('custom error messages', () => {
   });
 
   it('distinguishes a missing price from a price with the wrong type', () => {
-    expect(messagesFor(createProductSchema, { name: 'Mouse' })).toEqual(['Price is required']);
-    expect(messagesFor(createProductSchema, { name: 'Mouse', price: '9.99' })).toEqual([
-      'Price must be a number',
+    expect(messagesFor(createProductSchema, { name: 'Mouse' })).toEqual([
+      'price_cents is required',
+    ]);
+    expect(messagesFor(createProductSchema, { name: 'Mouse', price_cents: '999' })).toEqual([
+      'price_cents must be a number',
     ]);
     expect(
-      messagesFor(createProductSchema, { name: 'Mouse', price: 1, stock_quantity: '3' })
+      messagesFor(createProductSchema, { name: 'Mouse', price_cents: 100, stock_quantity: '3' })
     ).toEqual(['Stock quantity must be a number']);
   });
 
@@ -78,14 +80,14 @@ describe('transforms and defaults', () => {
     });
   });
 
-  it('applies product defaults and accepts prices with two decimals', () => {
-    expect(createProductSchema.parse({ name: 'Mouse', price: 19.99 })).toMatchObject({
-      price: 19.99,
+  it('applies product defaults and only accepts whole cents', () => {
+    expect(createProductSchema.parse({ name: 'Mouse', price_cents: 1999 })).toMatchObject({
+      price_cents: 1999,
       stock_quantity: 0,
       is_active: true,
     });
-    expect(messagesFor(createProductSchema, { name: 'Mouse', price: 1.999 })).toEqual([
-      'Price can have at most 2 decimal places',
+    expect(messagesFor(createProductSchema, { name: 'Mouse', price_cents: 19.99 })).toEqual([
+      'price_cents must be a whole number of cents',
     ]);
   });
 });

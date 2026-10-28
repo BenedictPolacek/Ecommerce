@@ -1,12 +1,5 @@
 import { resetDatabase, closeDatabase, query } from './helpers/db.js';
-import {
-  api,
-  authHeader,
-  createAdmin,
-  createProduct,
-  createUser,
-  shippingAddress,
-} from './helpers/factories.js';
+import { api, authHeader, createUser, shippingAddress } from './helpers/factories.js';
 
 beforeEach(resetDatabase);
 afterAll(closeDatabase);
@@ -67,38 +60,30 @@ describe('User email', () => {
 });
 
 describe('Order total', () => {
-  it('rejects a total that does not match its parts', async () => {
+  const insertOrder = async ({ subtotal, tax, shipping, total }) => {
     const { user } = await createUser();
+    return query(
+      `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents, shipping_address)
+       VALUES ($1, $2, $3, $4, $5, '{}')`,
+      [user.id, subtotal, tax, shipping, total]
+    );
+  };
 
+  it('accepts a total of subtotal + shipping, with VAT contained', async () => {
     await expect(
-      query(
-        `INSERT INTO orders (user_id, subtotal, tax, shipping_fee, total, shipping_address)
-         VALUES ($1, 10.00, 1.00, 2.00, 99.00, '{}')`,
-        [user.id]
-      )
+      insertOrder({ subtotal: 1000, tax: 160, shipping: 0, total: 1000 })
+    ).resolves.toBeDefined();
+  });
+
+  it('rejects a total that does not match its parts', async () => {
+    await expect(
+      insertOrder({ subtotal: 1000, tax: 0, shipping: 200, total: 9900 })
     ).rejects.toMatchObject({ code: '23514' });
   });
 
-  it('rounds fees to cents so checkout satisfies the total check', async () => {
-    const admin = await createAdmin();
-    const product = await createProduct(admin.token, { price: 10.5 });
-    const customer = await createUser();
-    await api()
-      .post('/api/cart/items')
-      .set(authHeader(customer.token))
-      .send({ productId: product.id, quantity: 1 });
-
-    const res = await api()
-      .post('/api/orders')
-      .set(authHeader(customer.token))
-      .send({ shippingAddress, shippingFee: 4.999, tax: 0.333 });
-
-    expect(res.status).toBe(201);
-    expect(res.body.data.order).toMatchObject({
-      subtotal: '10.50',
-      shipping_fee: '5.00',
-      tax: '0.33',
-      total: '15.83',
-    });
+  it('rejects VAT added on top, because prices already include it', async () => {
+    await expect(
+      insertOrder({ subtotal: 1000, tax: 190, shipping: 0, total: 1190 })
+    ).rejects.toMatchObject({ code: '23514' });
   });
 });

@@ -2,6 +2,7 @@ import pool from '../../config/db.js';
 import { AppError } from '../../utils/AppError.js';
 import { orderRepository } from './orders.repository.js';
 import { cartRepository } from '../cart/cart.repository.js';
+import { calculateOrderTotals } from './pricing.js';
 
 export const orderService = {
   /**
@@ -48,12 +49,12 @@ export const orderService = {
       }
 
       // 3. Verify stock, active state, and calculate subtotal with row locks (FOR UPDATE)
-      let subtotal = 0;
+      let subtotalCents = 0;
       const verifiedItems = [];
 
       for (const item of cartItems) {
         const prodRes = await client.query(
-          'SELECT id, name, price, stock_quantity, is_active FROM products WHERE id = $1 FOR UPDATE',
+          'SELECT id, name, price_cents, stock_quantity, is_active FROM products WHERE id = $1 FOR UPDATE',
           [item.product_id]
         );
 
@@ -75,32 +76,24 @@ export const orderService = {
           [item.quantity, product.id]
         );
 
-        const linePrice = Number(product.price);
-        subtotal += linePrice * item.quantity;
+        // Integer cents: exact, no rounding needed
+        subtotalCents += product.price_cents * item.quantity;
 
         verifiedItems.push({
           product_id: product.id,
           name: product.name,
-          price: linePrice,
+          unit_price_cents: product.price_cents,
           quantity: item.quantity,
         });
       }
 
-      // Round every part to cents before summing, so total matches the
-      // DB check total = subtotal + tax + shipping_fee exactly.
-      const roundToCents = (value) => Number(Number(value || 0).toFixed(2));
-      subtotal = roundToCents(subtotal);
-      const shippingFee = roundToCents(checkoutData.shippingFee);
-      const tax = roundToCents(checkoutData.tax);
-      const total = roundToCents(subtotal + shippingFee + tax);
+      // Shipping and tax are always calculated on the server, never taken from the client
+      const totals = calculateOrderTotals(subtotalCents);
 
       // 4. Create Order record
       const order = await orderRepository.createOrder(client, {
         userId,
-        subtotal,
-        tax,
-        shippingFee,
-        total,
+        ...totals,
         shippingAddress: resolvedAddress,
         paymentProvider: checkoutData.paymentProvider,
         paymentId: checkoutData.paymentId,

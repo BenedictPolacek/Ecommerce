@@ -30,9 +30,10 @@ export const createProductSchema = z.object({
 
   description: z.string().trim().max(5000, 'Description cannot exceed 5000 characters').optional(),
 
-  price: requiredNumber('Price is required', 'Price must be a number')
-    .min(0, 'Price cannot be negative')
-    .multipleOf(0.01, 'Price can have at most 2 decimal places'),
+  // Gross price incl. VAT in cents: 1999 = 19.99 €
+  price_cents: requiredNumber('price_cents is required', 'price_cents must be a number')
+    .int('price_cents must be a whole number of cents')
+    .min(0, 'price_cents cannot be negative'),
 
   stock_quantity: z
     .number({ error: 'Stock quantity must be a number' })
@@ -74,10 +75,10 @@ export const updateProductSchema = z
       .optional()
       .nullable(),
 
-    price: z
-      .number({ error: 'Price must be a number' })
-      .min(0, 'Price cannot be negative')
-      .multipleOf(0.01, 'Price can have at most 2 decimal places')
+    price_cents: z
+      .number({ error: 'price_cents must be a number' })
+      .int('price_cents must be a whole number of cents')
+      .min(0, 'price_cents cannot be negative')
       .optional(),
 
     stock_quantity: z
