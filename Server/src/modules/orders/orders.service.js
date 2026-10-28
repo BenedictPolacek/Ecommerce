@@ -3,6 +3,28 @@ import { AppError } from '../../utils/AppError.js';
 import { orderRepository } from './orders.repository.js';
 import { cartRepository } from '../cart/cart.repository.js';
 import { calculateOrderTotals } from './pricing.js';
+import { isUuid } from '../../utils/uuid.js';
+
+// ORD-2026-001001 (the counter can grow beyond 6 digits)
+const ORDER_NUMBER_REGEX = /^ORD-\d{4}-\d{6,}$/;
+
+/**
+ * Returns an address snapshot from a saved address (addressId wins) or the inline address.
+ * The snapshot is copied into the order, so later edits of the saved address don't change it.
+ */
+const resolveAddress = async (client, userId, { address, addressId, label }) => {
+  if (!addressId) return address ?? null;
+
+  const { rows } = await client.query('SELECT * FROM addresses WHERE id = $1 AND user_id = $2', [
+    addressId,
+    userId,
+  ]);
+  if (rows.length === 0) {
+    throw new AppError(`Specified ${label} address not found`, 404);
+  }
+  const { address_line1, address_line2, city, state, postal_code, country } = rows[0];
+  return { address_line1, address_line2, city, state, postal_code, country };
+};
 
 export const orderService = {
   /**
@@ -23,30 +45,22 @@ export const orderService = {
         throw new AppError('Your cart is empty. Add products to cart before checking out.', 400);
       }
 
-      // 2. Determine shipping address
-      let resolvedAddress = checkoutData.shippingAddress;
-      if (checkoutData.addressId) {
-        const addrRes = await client.query(
-          'SELECT * FROM addresses WHERE id = $1 AND user_id = $2',
-          [checkoutData.addressId, userId]
-        );
-        if (addrRes.rows.length === 0) {
-          throw new AppError('Specified shipping address not found', 404);
-        }
-        const addr = addrRes.rows[0];
-        resolvedAddress = {
-          address_line1: addr.address_line1,
-          address_line2: addr.address_line2,
-          city: addr.city,
-          state: addr.state,
-          postal_code: addr.postal_code,
-          country: addr.country,
-        };
-      }
-
-      if (!resolvedAddress) {
+      // 2. Determine shipping and billing address (billing defaults to shipping)
+      const shippingAddress = await resolveAddress(client, userId, {
+        address: checkoutData.shippingAddress,
+        addressId: checkoutData.addressId,
+        label: 'shipping',
+      });
+      if (!shippingAddress) {
         throw new AppError('A valid shipping address is required for checkout', 400);
       }
+
+      const billingAddress =
+        (await resolveAddress(client, userId, {
+          address: checkoutData.billingAddress,
+          addressId: checkoutData.billingAddressId,
+          label: 'billing',
+        })) ?? shippingAddress;
 
       // 3. Verify stock, active state, and calculate subtotal with row locks (FOR UPDATE)
       let subtotalCents = 0;
@@ -94,7 +108,8 @@ export const orderService = {
       const order = await orderRepository.createOrder(client, {
         userId,
         ...totals,
-        shippingAddress: resolvedAddress,
+        shippingAddress,
+        billingAddress,
         paymentProvider: checkoutData.paymentProvider,
         paymentId: checkoutData.paymentId,
       });
@@ -149,19 +164,22 @@ export const orderService = {
   },
 
   /**
-   * Get single order by ID with ownership verification
+   * Get single order by UUID or order number (ORD-2026-001001) with ownership verification
    */
-  async getOrderById(orderId, userId, userRole) {
-    const order = await orderRepository.findOrderById(orderId);
-    if (!order) {
+  async getOrderByIdOrNumber(idOrNumber, userId, userRole) {
+    let order = null;
+    if (isUuid(idOrNumber)) {
+      order = await orderRepository.findOrderById(idOrNumber);
+    } else if (ORDER_NUMBER_REGEX.test(idOrNumber)) {
+      order = await orderRepository.findOrderByNumber(idOrNumber);
+    }
+    // Someone else's order gets the same 404 as a missing one: order numbers are
+    // sequential, so a 403 would confirm which numbers exist (enumeration)
+    if (!order || (userRole !== 'admin' && order.user_id !== userId)) {
       throw new AppError('Order not found', 404);
     }
 
-    if (userRole !== 'admin' && order.user_id !== userId) {
-      throw new AppError('You do not have permission to view this order', 403);
-    }
-
-    const items = await orderRepository.findOrderItems(orderId);
+    const items = await orderRepository.findOrderItems(order.id);
     return { ...order, items };
   },
 

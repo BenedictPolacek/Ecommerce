@@ -63,8 +63,9 @@ describe('Order total', () => {
   const insertOrder = async ({ subtotal, tax, shipping, total }) => {
     const { user } = await createUser();
     return query(
-      `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents, shipping_address)
-       VALUES ($1, $2, $3, $4, $5, '{}')`,
+      `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents,
+                           shipping_address, billing_address)
+       VALUES ($1, $2, $3, $4, $5, '{}', '{}')`,
       [user.id, subtotal, tax, shipping, total]
     );
   };
