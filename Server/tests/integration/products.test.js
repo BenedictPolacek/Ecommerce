@@ -52,4 +52,11 @@ describe('Products', () => {
     const one = await api().get(`/api/products/${product.id}`);
     expect(one.body.data.is_active).toBe(false);
   });
+
+  it('answers an invalid query parameter with 400 instead of 500', async () => {
+    const res = await api().get('/api/products?page=abc');
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toEqual([expect.objectContaining({ field: 'page' })]);
+  });
 });

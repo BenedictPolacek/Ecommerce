@@ -169,6 +169,12 @@ export const swaggerSpec = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid', example: 'b0a70183-4bc9-4b6e-8263-1282be344d9f' },
+          parent_id: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'null for top-level categories',
+          },
           name: { type: 'string', example: 'Electronics' },
           slug: { type: 'string', example: 'electronics' },
           description: { type: 'string', example: 'Gadgets, devices, and accessories' },
@@ -176,13 +182,37 @@ export const swaggerSpec = {
           updated_at: { type: 'string', format: 'date-time' },
         },
       },
+      CategoryTreeNode: {
+        allOf: [
+          { $ref: '#/components/schemas/Category' },
+          {
+            type: 'object',
+            properties: {
+              children: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/CategoryTreeNode' },
+              },
+            },
+          },
+        ],
+      },
       CreateCategoryRequest: {
         type: 'object',
         required: ['name'],
         properties: {
-          name: { type: 'string', example: 'Electronics' },
-          slug: { type: 'string', example: 'electronics' },
-          description: { type: 'string', example: 'Consumer electronics and accessories' },
+          name: { type: 'string', example: 'Shirts' },
+          slug: {
+            type: 'string',
+            example: 'men-shirts',
+            description: "Optional. Defaults to the name, prefixed with the parent's slug",
+          },
+          description: { type: 'string', example: 'Casual and formal shirts' },
+          parent_id: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'Parent category. Max 3 levels deep',
+          },
         },
       },
       UpdateCategoryRequest: {
@@ -191,6 +221,13 @@ export const swaggerSpec = {
           name: { type: 'string', example: 'Home Appliances & Electronics' },
           slug: { type: 'string', example: 'home-appliances-electronics' },
           description: { type: 'string', example: 'Updated category description' },
+          parent_id: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description:
+              'Move the category (null = top level). Not allowed into its own subtree or beyond 3 levels. The slug is kept.',
+          },
         },
       },
       Product: {
@@ -602,24 +639,41 @@ export const swaggerSpec = {
       get: {
         tags: ['Categories'],
         summary: 'List all categories',
+        parameters: [
+          {
+            name: 'tree',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['true', 'false'] },
+            description:
+              'true = nested top-level categories with children[]; default = flat list with parent_id',
+          },
+        ],
         responses: {
           200: {
-            description: 'List of categories',
+            description: 'List of categories (flat, or nested when tree=true)',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
+                    count: { type: 'integer', example: 4 },
                     data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Category' },
+                      type: 'object',
+                      properties: {
+                        categories: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/CategoryTreeNode' },
+                        },
+                      },
                     },
                   },
                 },
               },
             },
           },
+          400: { $ref: '#/components/responses/ValidationError' },
         },
       },
       post: {
@@ -742,10 +796,11 @@ export const swaggerSpec = {
           },
         ],
         responses: {
-          204: { description: 'Category successfully deleted' },
+          200: { description: 'Category successfully deleted' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },
+          409: { description: 'Category still has subcategories or products' },
         },
       },
     },
@@ -780,7 +835,7 @@ export const swaggerSpec = {
             in: 'query',
             required: false,
             schema: { type: 'string', format: 'uuid' },
-            description: 'Filter by category UUID',
+            description: 'Filter by category UUID, including all of its subcategories',
           },
           {
             name: 'is_active',

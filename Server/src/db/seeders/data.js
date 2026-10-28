@@ -5,6 +5,26 @@ export const categories = [
   { name: 'Books', slug: 'books', description: 'Fiction, non-fiction and technical books' },
   { name: 'Clothing', slug: 'clothing', description: 'Apparel for every season' },
   { name: 'Home & Kitchen', slug: 'home-kitchen', description: 'Everything for your home' },
+  // Subcategories reference their parent by slug, so parents must be listed first
+  {
+    name: 'Computer Accessories',
+    slug: 'electronics-computer-accessories',
+    description: 'Keyboards, mice and more',
+    parent: 'electronics',
+  },
+  {
+    name: 'Audio',
+    slug: 'electronics-audio',
+    description: 'Headphones and speakers',
+    parent: 'electronics',
+  },
+  { name: 'Tops', slug: 'clothing-tops', description: 'Shirts and sweaters', parent: 'clothing' },
+  {
+    name: 'Hoodies',
+    slug: 'clothing-tops-hoodies',
+    description: 'Hooded sweatshirts',
+    parent: 'clothing-tops',
+  },
 ];
 
 export const products = [
@@ -14,7 +34,7 @@ export const products = [
     description: 'Tenkeyless keyboard with hot-swappable switches',
     price: 89.99,
     stock_quantity: 50,
-    category: 'electronics',
+    category: 'electronics-computer-accessories',
   },
   {
     sku: 'ELEC-MS-001',
@@ -22,7 +42,7 @@ export const products = [
     description: 'Ergonomic mouse with 70 days of battery life',
     price: 39.9,
     stock_quantity: 120,
-    category: 'electronics',
+    category: 'electronics-computer-accessories',
   },
   {
     sku: 'ELEC-HP-001',
@@ -30,7 +50,7 @@ export const products = [
     description: 'Over-ear headphones with active noise cancellation',
     price: 199.0,
     stock_quantity: 25,
-    category: 'electronics',
+    category: 'electronics-audio',
   },
   {
     sku: 'BOOK-JS-001',
@@ -54,7 +74,7 @@ export const products = [
     description: 'Unisex t-shirt made from 100% organic cotton',
     price: 19.99,
     stock_quantity: 200,
-    category: 'clothing',
+    category: 'clothing-tops',
   },
   {
     sku: 'CLTH-HD-001',
@@ -62,7 +82,7 @@ export const products = [
     description: 'Warm hoodie with a full-length zipper',
     price: 49.0,
     stock_quantity: 0,
-    category: 'clothing',
+    category: 'clothing-tops-hoodies',
   },
   {
     sku: 'HOME-CF-001',

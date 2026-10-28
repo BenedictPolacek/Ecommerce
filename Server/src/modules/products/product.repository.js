@@ -7,7 +7,7 @@ export const productRepository = {
    *
    * @param {Object} options
    * @param {string}  [options.search]      - Partial match on product name
-   * @param {string}  [options.category_id] - Filter by category UUID
+   * @param {string}  [options.category_id] - Filter by category UUID, including its subcategories
    * @param {boolean} [options.is_active]   - Filter by active status (default: true for public)
    * @param {number}  [options.limit]       - Max rows to return
    * @param {number}  [options.offset]      - Rows to skip (for pagination)
@@ -22,7 +22,15 @@ export const productRepository = {
       values.push(`%${search}%`);
     }
     if (category_id !== undefined) {
-      conditions.push(`p.category_id = $${idx++}`);
+      // Include products of all subcategories (Clothing also lists Men → Shirts)
+      conditions.push(`p.category_id IN (
+        WITH RECURSIVE subtree AS (
+          SELECT id FROM categories WHERE id = $${idx++}
+          UNION ALL
+          SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+        )
+        SELECT id FROM subtree
+      )`);
       values.push(category_id);
     }
     if (is_active !== undefined) {

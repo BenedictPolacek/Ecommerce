@@ -1,5 +1,7 @@
 import { AppError } from '../utils/AppError.js';
+import { ZodError } from 'zod';
 import { config } from '../config/env.js';
+import { toValidationError } from './validate.js';
 
 /**
  * Maps PostgreSQL error codes to operational AppError instances.
@@ -48,6 +50,11 @@ export const errorHandler = (err, req, res, _next) => {
   // 3. PostgreSQL database errors
   if (err.code && typeof err.code === 'string') {
     error = handlePostgresError(err);
+  }
+
+  // 4. Zod errors from schemas parsed outside the validate middleware (e.g. req.query in controllers)
+  if (err instanceof ZodError) {
+    error = toValidationError(err);
   }
 
   const statusCode =
