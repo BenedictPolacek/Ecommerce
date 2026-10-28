@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import pool from '../../config/db.js';
 import { config } from '../../config/env.js';
+import { slugify } from '../../utils/slug.js';
 import { categories, products } from './data.js';
 
 /**
@@ -28,20 +29,34 @@ export async function seed() {
 
     let insertedProducts = 0;
     for (const product of products) {
-      const { rowCount } = await client.query(
-        `INSERT INTO products (category_id, name, sku, description, price, stock_quantity)
-         VALUES ((SELECT id FROM categories WHERE slug = $1), $2, $3, $4, $5, $6)
-         ON CONFLICT (sku) DO NOTHING`,
+      // Conflicts on sku or slug both mean "already seeded"
+      const { rows } = await client.query(
+        `INSERT INTO products (category_id, name, slug, sku, description, price, stock_quantity)
+         VALUES ((SELECT id FROM categories WHERE slug = $1), $2, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING
+         RETURNING id`,
         [
           product.category,
           product.name,
+          slugify(product.name),
           product.sku,
           product.description,
           product.price,
           product.stock_quantity,
         ]
       );
-      insertedProducts += rowCount;
+      if (rows.length === 0) continue;
+      insertedProducts += 1;
+
+      // Placeholder image service, stands in for a real CDN
+      await client.query(
+        `INSERT INTO product_images (product_id, url, alt_text, sort_order) VALUES ($1, $2, $3, 0)`,
+        [
+          rows[0].id,
+          `https://placehold.co/600x600?text=${encodeURIComponent(product.name)}`,
+          product.name,
+        ]
+      );
     }
 
     const passwordHash = await bcrypt.hash(config.seed.adminPassword, config.bcrypt.saltRounds);

@@ -241,9 +241,47 @@ export const swaggerSpec = {
           price: { type: 'number', format: 'float', example: 99.99 },
           stock_quantity: { type: 'integer', example: 45 },
           category_id: { type: 'string', format: 'uuid', nullable: true },
+          category_name: { type: 'string', nullable: true, example: 'Computer Accessories' },
           is_active: { type: 'boolean', example: true },
+          primary_image: {
+            type: 'object',
+            nullable: true,
+            description: 'Only in list responses: the image with the lowest sort_order',
+            properties: {
+              url: { type: 'string', example: 'https://cdn.example.com/keyboard-front.jpg' },
+              alt_text: { type: 'string', nullable: true },
+            },
+          },
+          images: {
+            type: 'array',
+            description: 'Only in single-product responses, ordered by sort_order',
+            items: { $ref: '#/components/schemas/ProductImage' },
+          },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      ProductImage: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          url: { type: 'string', example: 'https://cdn.example.com/keyboard-front.jpg' },
+          alt_text: { type: 'string', nullable: true, example: 'Keyboard, front view' },
+          sort_order: { type: 'integer', example: 0, description: '0 = primary image' },
+        },
+      },
+      AddProductImageRequest: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url: {
+            type: 'string',
+            format: 'uri',
+            example: 'https://cdn.example.com/keyboard-front.jpg',
+            description:
+              'http(s) only. The file is hosted elsewhere (CDN), only the URL is stored.',
+          },
+          alt_text: { type: 'string', example: 'Keyboard, front view' },
         },
       },
       CreateProductRequest: {
@@ -251,6 +289,11 @@ export const swaggerSpec = {
         required: ['name', 'price'],
         properties: {
           name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
+          slug: {
+            type: 'string',
+            example: 'wireless-mechanical-keyboard',
+            description: 'Optional. Generated from the name; duplicates get -2, -3, ...',
+          },
           sku: { type: 'string', example: 'KB-WL-001' },
           description: { type: 'string', example: 'Compact 75% mechanical switches' },
           price: { type: 'number', format: 'float', example: 99.99 },
@@ -263,6 +306,11 @@ export const swaggerSpec = {
         type: 'object',
         properties: {
           name: { type: 'string', example: 'Updated Keyboard Name' },
+          slug: {
+            type: 'string',
+            example: 'keyboard-v2',
+            description: 'Renaming keeps the old slug; send this to change it explicitly',
+          },
           sku: { type: 'string', example: 'KB-WL-001-V2' },
           description: { type: 'string', example: 'Enhanced bluetooth support' },
           price: { type: 'number', format: 'float', example: 109.99 },
@@ -828,7 +876,8 @@ export const swaggerSpec = {
             in: 'query',
             required: false,
             schema: { type: 'string' },
-            description: 'Search term matching name or description',
+            description:
+              'Full-text search on name (ranked higher) and description. English stemming, every word must match as a prefix ("mech keyb"). Results are sorted by relevance.',
           },
           {
             name: 'category_id',
@@ -887,7 +936,7 @@ export const swaggerSpec = {
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
           409: {
-            description: 'SKU already exists',
+            description: 'SKU or slug already exists',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -901,14 +950,14 @@ export const swaggerSpec = {
     '/products/{id}': {
       get: {
         tags: ['Products'],
-        summary: 'Get single product by UUID',
+        summary: 'Get single product by UUID or slug (includes all images)',
         parameters: [
           {
             name: 'id',
             in: 'path',
             required: true,
-            schema: { type: 'string', format: 'uuid' },
-            description: 'Product UUID',
+            schema: { type: 'string' },
+            description: 'Product UUID or slug, e.g. mechanical-keyboard',
           },
         ],
         responses: {
@@ -987,6 +1036,126 @@ export const swaggerSpec = {
         ],
         responses: {
           204: { description: 'Product deleted' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/products/{id}/images': {
+      post: {
+        tags: ['Products'],
+        summary: 'Add an image to the end of the gallery (Admin, max 10)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AddProductImageRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Image added',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: { image: { $ref: '#/components/schemas/ProductImage' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/products/{id}/images/order': {
+      put: {
+        tags: ['Products'],
+        summary: 'Reorder images; the first ID becomes the primary image (Admin)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['image_ids'],
+                properties: {
+                  image_ids: {
+                    type: 'array',
+                    description: 'Every image ID of the product exactly once, in the new order',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Images in their new order',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        images: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/ProductImage' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/products/{id}/images/{imageId}': {
+      delete: {
+        tags: ['Products'],
+        summary: 'Delete an image (Admin)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'imageId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          200: { description: 'Image deleted' },
+          400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },

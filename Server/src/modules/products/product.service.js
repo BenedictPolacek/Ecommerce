@@ -1,11 +1,48 @@
 import { AppError } from '../../utils/AppError.js';
+import { slugify } from '../../utils/slug.js';
+import { isUuid } from '../../utils/uuid.js';
 import { productRepository } from './product.repository.js';
+import { productImageRepository } from './product-image.repository.js';
 import { categoryRepository } from '../categories/category.repository.js';
+
+export const MAX_IMAGES_PER_PRODUCT = 10;
 
 const assertCategoryExists = async (category_id) => {
   if (category_id === undefined || category_id === null) return;
   const category = await categoryRepository.findById(category_id);
   if (!category) throw new AppError('Category not found', 404);
+};
+
+const assertSlugAvailable = async (slug, ownId = null) => {
+  const conflict = await productRepository.findBySlug(slug);
+  if (conflict && conflict.id !== ownId) {
+    throw new AppError(`A product with the slug "${slug}" already exists`, 409);
+  }
+};
+
+/**
+ * Picks the first free slug: t-shirt, t-shirt-2, t-shirt-3, ...
+ * Product names repeat often, so a generated slug never fails with 409.
+ */
+export const nextFreeSlug = (base, takenSlugs) => {
+  const taken = new Set(takenSlugs);
+  if (!taken.has(base)) return base;
+
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+};
+
+const generateSlug = async (name) => {
+  const base = slugify(name) || 'product';
+  const taken = await productRepository.findSlugsStartingWith(base);
+  return nextFreeSlug(base, taken);
+};
+
+const getProductOrFail = async (id) => {
+  const product = await productRepository.findById(id);
+  if (!product) throw new AppError('Product not found', 404);
+  return product;
 };
 
 export const productService = {
@@ -28,8 +65,13 @@ export const productService = {
     };
   },
 
-  async getProductById(id) {
-    const product = await productRepository.findById(id);
+  /**
+   * Retrieve a product by UUID or slug (/products/mechanical-keyboard)
+   */
+  async getProductByIdOrSlug(idOrSlug) {
+    const product = isUuid(idOrSlug)
+      ? await productRepository.findById(idOrSlug)
+      : await productRepository.findBySlug(idOrSlug);
     if (!product) throw new AppError('Product not found', 404);
     return product;
   },
@@ -39,22 +81,39 @@ export const productService = {
       throw new AppError('SKU already exists', 409);
     }
     await assertCategoryExists(data.category_id);
-    return productRepository.create(data);
+
+    // An explicit slug must be free; a generated one gets a numeric suffix instead
+    let slug;
+    if (data.slug) {
+      slug = data.slug;
+      await assertSlugAvailable(slug);
+    } else {
+      slug = await generateSlug(data.name);
+    }
+
+    const created = await productRepository.create({ ...data, slug });
+    // Same shape as GET /products/:id (category_name, images)
+    return productRepository.findById(created.id);
   },
 
+  /**
+   * Renaming keeps the slug so existing links stay valid; only an explicit slug changes it.
+   */
   async updateProduct(id, data) {
-    const existing = await productRepository.findById(id);
-    if (!existing) throw new AppError('Product not found', 404);
+    const existing = await getProductOrFail(id);
 
     if (data.sku && data.sku !== existing.sku) {
       const conflict = await productRepository.findBySku(data.sku);
       if (conflict) throw new AppError('SKU already exists', 409);
     }
+    if (data.slug && data.slug !== existing.slug) {
+      await assertSlugAvailable(data.slug, id);
+    }
     await assertCategoryExists(data.category_id);
 
     const updated = await productRepository.update(id, data);
     if (!updated) throw new AppError('Product not found', 404);
-    return updated;
+    return productRepository.findById(id);
   },
 
   async updateStock(id, stock_quantity) {
@@ -71,6 +130,46 @@ export const productService = {
     const product = await productRepository.deactivate(id);
     if (!product) throw new AppError('Product not found', 404);
     return product;
+  },
+
+  // ─── Images ────────────────────────────────────────────────────────────────
+
+  async addImage(productId, { url, alt_text }) {
+    await getProductOrFail(productId);
+
+    const images = await productImageRepository.findByProductId(productId);
+    if (images.length >= MAX_IMAGES_PER_PRODUCT) {
+      throw new AppError(`A product can have at most ${MAX_IMAGES_PER_PRODUCT} images`, 400);
+    }
+
+    return productImageRepository.create(productId, { url, alt_text });
+  },
+
+  /**
+   * imageIds must list every image of the product exactly once, in the new order
+   */
+  async reorderImages(productId, imageIds) {
+    await getProductOrFail(productId);
+
+    const current = await productImageRepository.findByProductId(productId);
+    const currentIds = new Set(current.map((image) => image.id));
+    // Same size + no duplicates + all known = exactly the same set ([a, a] for {a, b} fails)
+    const isSameSet =
+      imageIds.length === currentIds.size &&
+      new Set(imageIds).size === imageIds.length &&
+      imageIds.every((id) => currentIds.has(id));
+    if (!isSameSet) {
+      throw new AppError('image_ids must contain every image of this product exactly once', 400);
+    }
+
+    await productImageRepository.reorder(productId, imageIds);
+    return productImageRepository.findByProductId(productId);
+  },
+
+  async deleteImage(productId, imageId) {
+    const deleted = await productImageRepository.delete(productId, imageId);
+    if (!deleted) throw new AppError('Image not found', 404);
+    return deleted;
   },
 };
 

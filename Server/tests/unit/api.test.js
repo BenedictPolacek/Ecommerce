@@ -92,8 +92,9 @@ describe('Authentication & Protected Routes Middleware', () => {
 });
 
 describe('Validation Middleware', () => {
-  it('GET /api/products/:id should reject invalid UUID parameter with 400', async () => {
-    const res = await request(app).get('/api/products/not-a-valid-uuid');
+  // GET /api/products/:idOrSlug accepts slugs, so validation is checked on query params instead
+  it('GET /api/products should reject an invalid query parameter with 400', async () => {
+    const res = await request(app).get('/api/products?limit=1000');
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
     expect(res.body.message).toBe('Validation failed');

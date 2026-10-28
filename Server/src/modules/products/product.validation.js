@@ -1,5 +1,15 @@
 import { z } from 'zod';
+import { SLUG_REGEX } from '../../utils/slug.js';
 import { requiredNumber, requiredString } from '../../utils/zod.js';
+
+// Optional on create (generated from the name) and update (kept when renaming)
+const slugField = z
+  .string()
+  .trim()
+  .min(1, 'Slug cannot be empty')
+  .max(255, 'Slug cannot exceed 255 characters')
+  .regex(SLUG_REGEX, 'Slug must be lowercase alphanumeric with hyphens')
+  .optional();
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
@@ -8,6 +18,8 @@ export const createProductSchema = z.object({
     .trim()
     .min(1, 'Product name cannot be empty')
     .max(255, 'Product name cannot exceed 255 characters'),
+
+  slug: slugField,
 
   sku: z
     .string()
@@ -44,6 +56,8 @@ export const updateProductSchema = z
       .min(1, 'Product name cannot be empty')
       .max(255, 'Product name cannot exceed 255 characters')
       .optional(),
+
+    slug: slugField,
 
     sku: z
       .string()
@@ -86,6 +100,27 @@ export const updateStockSchema = z.object({
   stock_quantity: requiredNumber('stock_quantity is required', 'Stock quantity must be a number')
     .int('Stock quantity must be a whole number')
     .min(0, 'Stock quantity cannot be negative'),
+});
+
+// ─── Images ───────────────────────────────────────────────────────────────────
+
+export const addImageSchema = z.object({
+  // Only http(s): no javascript: or data: URLs that could end up in an <img src>
+  url: z
+    .url({ protocol: /^https?$/, error: 'url must be a valid http(s) URL' })
+    .max(2048, 'url cannot exceed 2048 characters'),
+  alt_text: z.string().trim().max(255, 'Alt text cannot exceed 255 characters').optional(),
+});
+
+export const reorderImagesSchema = z.object({
+  image_ids: z
+    .array(z.uuid('image_ids must contain valid UUIDs'), { error: 'image_ids must be an array' })
+    .min(1, 'image_ids cannot be empty'),
+});
+
+export const imageParamsSchema = z.object({
+  id: z.uuid('Invalid product ID format (must be a valid UUID)'),
+  imageId: z.uuid('Invalid image ID format (must be a valid UUID)'),
 });
 
 // ─── Query params ─────────────────────────────────────────────────────────────

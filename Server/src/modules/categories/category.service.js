@@ -1,9 +1,7 @@
 import { AppError } from '../../utils/AppError.js';
 import { categoryRepository } from './category.repository.js';
-import { slugify } from './category.validation.js';
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { slugify } from '../../utils/slug.js';
+import { isUuid } from '../../utils/uuid.js';
 
 // e.g. Clothing → Men → Shirts
 export const MAX_CATEGORY_DEPTH = 3;
@@ -63,7 +61,7 @@ export const categoryService = {
   async getCategoryByIdOrSlug(idOrSlug) {
     let category = null;
 
-    if (UUID_REGEX.test(idOrSlug)) {
+    if (isUuid(idOrSlug)) {
       category = await categoryRepository.findById(idOrSlug);
     }
 

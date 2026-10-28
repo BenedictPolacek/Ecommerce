@@ -13,9 +13,11 @@ export const productController = {
     });
   }),
 
+  /**
+   * GET /api/products/:idOrSlug
+   */
   getOne: catchAsync(async (req, res) => {
-    const id = req.idParam || req.params.id;
-    const product = await productService.getProductById(id);
+    const product = await productService.getProductByIdOrSlug(req.params.idOrSlug);
 
     res.status(200).json({
       success: true,
@@ -57,6 +59,42 @@ export const productController = {
   delete: catchAsync(async (req, res) => {
     const id = req.idParam || req.params.id;
     await productService.deleteProduct(id);
+
+    res.status(200).json({
+      success: true,
+      data: null,
+    });
+  }),
+
+  /**
+   * POST /api/products/:id/images
+   */
+  addImage: catchAsync(async (req, res) => {
+    const image = await productService.addImage(req.idParam, req.body);
+
+    res.status(201).json({
+      success: true,
+      data: { image },
+    });
+  }),
+
+  /**
+   * PUT /api/products/:id/images/order
+   */
+  reorderImages: catchAsync(async (req, res) => {
+    const images = await productService.reorderImages(req.idParam, req.body.image_ids);
+
+    res.status(200).json({
+      success: true,
+      data: { images },
+    });
+  }),
+
+  /**
+   * DELETE /api/products/:id/images/:imageId
+   */
+  deleteImage: catchAsync(async (req, res) => {
+    await productService.deleteImage(req.params.id, req.params.imageId);
 
     res.status(200).json({
       success: true,

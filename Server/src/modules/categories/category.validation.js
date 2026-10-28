@@ -1,17 +1,6 @@
 import { z } from 'zod';
+import { SLUG_REGEX } from '../../utils/slug.js';
 import { requiredString } from '../../utils/zod.js';
-
-/**
- * Utility to generate URL-friendly slug from string
- */
-export const slugify = (text) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/[\s\W-]+/g, '-') // Replace spaces and non-word chars with -
-    .replace(/^-+|-+$/g, ''); // Trim starting/trailing dashes
-};
 
 export const createCategorySchema = z.object({
   name: requiredString('Category name is required')
@@ -23,7 +12,7 @@ export const createCategorySchema = z.object({
     .trim()
     .min(1, 'Slug cannot be empty')
     .max(100, 'Slug cannot exceed 100 characters')
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
+    .regex(SLUG_REGEX, 'Slug must be lowercase alphanumeric with hyphens')
     .optional(),
   description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
   parent_id: z.uuid('parent_id must be a valid UUID').optional().nullable(),
@@ -42,7 +31,7 @@ export const updateCategorySchema = z
       .trim()
       .min(1, 'Slug cannot be empty')
       .max(100, 'Slug cannot exceed 100 characters')
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
+      .regex(SLUG_REGEX, 'Slug must be lowercase alphanumeric with hyphens')
       .optional(),
     description: z.string().trim().max(500, 'Description cannot exceed 500 characters').optional(),
     parent_id: z.uuid('parent_id must be a valid UUID').optional().nullable(),
@@ -58,4 +47,4 @@ export const categoryQuerySchema = z.object({
     .transform((value) => value === 'true'),
 });
 
-export default { slugify, createCategorySchema, updateCategorySchema, categoryQuerySchema };
+export default { createCategorySchema, updateCategorySchema, categoryQuerySchema };
