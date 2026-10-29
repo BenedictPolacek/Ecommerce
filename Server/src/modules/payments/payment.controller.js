@@ -7,7 +7,7 @@ export const paymentController = {
    * POST /api/orders/:id/payments
    */
   record: catchAsync(async (req, res) => {
-    const result = await paymentService.recordManualPayment(req.idParam, req.body);
+    const result = await paymentService.recordManualPayment(req.idParam, req.body, req.user.id);
     res.status(201).json({
       success: true,
       message: 'Payment recorded successfully',

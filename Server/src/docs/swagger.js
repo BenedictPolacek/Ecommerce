@@ -621,6 +621,11 @@ export const swaggerSpec = {
             type: 'array',
             items: { $ref: '#/components/schemas/Payment' },
           },
+          status_history: {
+            type: 'array',
+            description: 'Oldest first. Customers only get from_status, to_status and created_at.',
+            items: { $ref: '#/components/schemas/OrderStatusHistoryEntry' },
+          },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
         },
@@ -690,17 +695,33 @@ export const swaggerSpec = {
         properties: {
           status: {
             type: 'string',
-            enum: [
-              'pending',
-              'paid',
-              'processing',
-              'shipped',
-              'delivered',
-              'cancelled',
-              'refunded',
-            ],
+            enum: ['processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+            description: '`paid` is set by recording a payment, `pending` is only the start state',
             example: 'processing',
           },
+          note: {
+            type: 'string',
+            maxLength: 500,
+            example: 'Customer asked to cancel by phone',
+            description: 'Internal note stored in the status history (admins only)',
+          },
+        },
+      },
+      OrderStatusHistoryEntry: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Admins only' },
+          order_id: { type: 'string', format: 'uuid', description: 'Admins only' },
+          from_status: { type: 'string', nullable: true, example: 'paid' },
+          to_status: { type: 'string', example: 'processing' },
+          changed_by: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'Admins only. Customer (checkout) or admin; null for migrated data',
+          },
+          note: { type: 'string', nullable: true, description: 'Admins only' },
+          created_at: { type: 'string', format: 'date-time' },
         },
       },
     },
@@ -1943,7 +1964,7 @@ export const swaggerSpec = {
         tags: ['Orders'],
         summary: 'Update order status (Admin only)',
         description:
-          'Setting `cancelled` puts the ordered quantities back into stock (`order_cancelled` movements). `cancelled` is final: changing it again returns 409.',
+          'Allowed transitions: pending → cancelled; paid → processing | cancelled | refunded; processing → shipped | cancelled | refunded; shipped → delivered | refunded; delivered → refunded. `cancelled` and `refunded` are final. Other transitions return 409; the current status again is a no-op (200). Every change is recorded in `status_history`. Setting `cancelled` puts the ordered quantities back into stock (`order_cancelled` movements).',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         parameters: [
           {
@@ -1982,7 +2003,7 @@ export const swaggerSpec = {
           403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },
           409: {
-            description: 'The order is cancelled and cannot change its status',
+            description: 'Transition not allowed from the current status',
             content: {
               'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
             },

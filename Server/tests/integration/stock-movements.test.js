@@ -118,13 +118,14 @@ describe('Stock movements', () => {
       const order = await placeOrder(1);
       await setStatus(order, 'cancelled');
 
-      const res = await setStatus(order, 'pending');
+      const res = await setStatus(order, 'processing');
 
       expect(res.status).toBe(409);
     });
 
     it('does not put stock back for other statuses', async () => {
       const order = await placeOrder(2);
+      await api().post(`/api/orders/${order.id}/payments`).set(authHeader(admin.token)).send({});
 
       await setStatus(order, 'refunded');
 

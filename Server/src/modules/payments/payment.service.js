@@ -1,24 +1,22 @@
 import pool from '../../config/db.js';
 import { AppError } from '../../utils/AppError.js';
 import { paymentRepository } from './payment.repository.js';
+import { orderRepository } from '../orders/orders.repository.js';
+import { changeOrderStatus } from '../orders/order-status.js';
 
 export const paymentService = {
   /**
    * Records a payment that has already arrived (e.g. bank transfer), entered by an admin.
    * Once the succeeded payments cover the order total, the order becomes 'paid'.
    */
-  async recordManualPayment(orderId, { provider, providerPaymentId, amountCents }) {
+  async recordManualPayment(orderId, { provider, providerPaymentId, amountCents }, userId) {
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
 
       // FOR UPDATE: two admins recording at the same time must not both see the old balance
-      const { rows } = await client.query(
-        'SELECT id, status, total_cents, currency FROM orders WHERE id = $1 FOR UPDATE',
-        [orderId]
-      );
-      const order = rows[0];
+      const order = await orderRepository.lockOrder(client, orderId);
       if (!order) {
         throw new AppError('Order not found', 404);
       }
@@ -51,7 +49,7 @@ export const paymentService = {
 
       const fullyPaid = paidCents + amount === order.total_cents;
       if (fullyPaid) {
-        await client.query("UPDATE orders SET status = 'paid' WHERE id = $1", [orderId]);
+        await changeOrderStatus(client, order, 'paid', { userId });
       }
 
       await client.query('COMMIT');

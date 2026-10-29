@@ -34,8 +34,14 @@ export const orderStatusEnum = z.enum([
   'refunded',
 ]);
 
+// Admins can't set 'pending' (only the start state) or 'paid' (only set by recorded payments)
 export const updateOrderStatusSchema = z.object({
-  status: orderStatusEnum,
+  status: orderStatusEnum.exclude(['pending', 'paid'], {
+    error:
+      'status must be one of: processing, shipped, delivered, cancelled, refunded ("paid" is set by recording a payment)',
+  }),
+  // Internal note for the status history, e.g. why an order was cancelled
+  note: z.string().trim().min(1).max(500).optional(),
 });
 
 export const orderListQuerySchema = z.object({
