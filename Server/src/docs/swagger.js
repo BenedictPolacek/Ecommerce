@@ -322,13 +322,20 @@ export const swaggerSpec = {
           sku: { type: 'string', example: 'KB-WL-001' },
           description: { type: 'string', example: 'Compact 75% mechanical switches' },
           price_cents: { type: 'integer', example: 9999, description: 'Gross price in cents' },
-          stock_quantity: { type: 'integer', example: 45, default: 0 },
+          stock_quantity: {
+            type: 'integer',
+            example: 45,
+            default: 0,
+            description: 'Opening stock, recorded as an `initial` stock movement',
+          },
           category_id: { type: 'string', format: 'uuid', nullable: true },
           is_active: { type: 'boolean', default: true },
         },
       },
       UpdateProductRequest: {
         type: 'object',
+        description:
+          'stock_quantity is rejected here (400); use PATCH /products/{id}/stock or POST /products/{id}/stock-movements',
         properties: {
           name: { type: 'string', example: 'Updated Keyboard Name' },
           slug: {
@@ -339,7 +346,6 @@ export const swaggerSpec = {
           sku: { type: 'string', example: 'KB-WL-001-V2' },
           description: { type: 'string', example: 'Enhanced bluetooth support' },
           price_cents: { type: 'integer', example: 10999 },
-          stock_quantity: { type: 'integer', example: 30 },
           category_id: { type: 'string', format: 'uuid', nullable: true },
           is_active: { type: 'boolean' },
         },
@@ -349,6 +355,49 @@ export const swaggerSpec = {
         required: ['stock_quantity'],
         properties: {
           stock_quantity: { type: 'integer', minimum: 0, example: 100 },
+          note: { type: 'string', maxLength: 500, example: 'Inventory count 2026' },
+        },
+      },
+      StockMovement: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          product_id: { type: 'string', format: 'uuid' },
+          quantity: { type: 'integer', example: -2, description: 'Signed change (+ in, - out)' },
+          balance_after: { type: 'integer', example: 43, description: 'Stock after this movement' },
+          reason: {
+            type: 'string',
+            enum: ['initial', 'sale', 'order_cancelled', 'restock', 'damage', 'adjustment'],
+            example: 'sale',
+          },
+          order_id: { type: 'string', format: 'uuid', nullable: true },
+          order_number: {
+            type: 'string',
+            nullable: true,
+            example: 'ORD-2026-001001',
+            description: 'Only in the history list',
+          },
+          created_by: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'Customer for a sale, admin otherwise; null for seed/migration data',
+          },
+          note: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      RecordStockMovementRequest: {
+        type: 'object',
+        required: ['reason', 'quantity'],
+        properties: {
+          reason: { type: 'string', enum: ['restock', 'damage', 'adjustment'] },
+          quantity: {
+            type: 'integer',
+            example: 50,
+            description: 'Signed, not 0: restock > 0, damage < 0, adjustment either',
+          },
+          note: { type: 'string', maxLength: 500, example: 'Delivery #42' },
         },
       },
       ProductListResponse: {
@@ -1308,10 +1357,116 @@ export const swaggerSpec = {
         },
       },
     },
+    '/products/{id}/stock-movements': {
+      get: {
+        tags: ['Products'],
+        summary: 'Stock history of a product (Admin, paginated, newest first)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Product UUID',
+          },
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'One page of stock movements',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        movements: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/StockMovement' },
+                        },
+                        pagination: { $ref: '#/components/schemas/Pagination' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+      post: {
+        tags: ['Products'],
+        summary: 'Record a restock, damage or adjustment (Admin)',
+        description:
+          'Relative change. Sales, cancellations and opening stock are recorded automatically and cannot be posted here.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Product UUID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RecordStockMovementRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Movement recorded',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: { movement: { $ref: '#/components/schemas/StockMovement' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+          409: {
+            description: 'The movement would make the stock negative',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+            },
+          },
+        },
+      },
+    },
     '/products/{id}/stock': {
       patch: {
         tags: ['Products'],
-        summary: 'Update product stock inventory (Admin)',
+        summary: 'Set stock after an inventory count (Admin)',
+        description:
+          'Absolute value. The difference to the current stock is recorded as an `adjustment` stock movement (none if equal).',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         parameters: [
           {
@@ -1787,6 +1942,8 @@ export const swaggerSpec = {
       patch: {
         tags: ['Orders'],
         summary: 'Update order status (Admin only)',
+        description:
+          'Setting `cancelled` puts the ordered quantities back into stock (`order_cancelled` movements). `cancelled` is final: changing it again returns 409.',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         parameters: [
           {
@@ -1824,6 +1981,12 @@ export const swaggerSpec = {
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },
+          409: {
+            description: 'The order is cancelled and cannot change its status',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+            },
+          },
         },
       },
     },

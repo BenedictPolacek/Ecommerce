@@ -3,6 +3,7 @@ import { AppError } from '../../utils/AppError.js';
 import { orderRepository } from './orders.repository.js';
 import { cartRepository } from '../cart/cart.repository.js';
 import { paymentRepository } from '../payments/payment.repository.js';
+import { stockRepository } from '../stock/stock.repository.js';
 import { calculateOrderTotals } from './pricing.js';
 import { isUuid } from '../../utils/uuid.js';
 import { paginationMeta, toOffset } from '../../utils/pagination.js';
@@ -105,12 +106,6 @@ export const orderService = {
           );
         }
 
-        // Deduct stock immediately in transaction
-        await client.query(
-          'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
-          [item.quantity, product.id]
-        );
-
         // Integer cents: exact, no rounding needed
         subtotalCents += product.price_cents * item.quantity;
 
@@ -136,10 +131,22 @@ export const orderService = {
       // 5. Insert order items
       const insertedItems = await orderRepository.insertOrderItems(client, order.id, verifiedItems);
 
-      // 6. Clear user cart items
+      // 6. Deduct stock as 'sale' movements. Only now, because a sale references its order;
+      //    the product rows are still locked (FOR UPDATE above) until COMMIT.
+      for (const item of verifiedItems) {
+        await stockRepository.applyMovement(client, {
+          productId: item.product_id,
+          quantity: -item.quantity,
+          reason: 'sale',
+          orderId: order.id,
+          createdBy: userId,
+        });
+      }
+
+      // 7. Clear user cart items
       await cartRepository.clearCart(cart.id, client);
 
-      // 7. Commit transaction
+      // 8. Commit transaction
       await client.query('COMMIT');
 
       return {
@@ -191,13 +198,48 @@ export const orderService = {
   /**
    * Update the status of an existing order (Admin only)
    */
-  async updateOrderStatus(orderId, status) {
-    const order = await orderRepository.findOrderById(orderId);
-    if (!order) {
-      throw new AppError('Order not found', 404);
+  async updateOrderStatus(orderId, status, userId) {
+    const client = await pool.connect();
+    let updated;
+
+    try {
+      await client.query('BEGIN');
+
+      // FOR UPDATE: two parallel cancellations must not both put the stock back
+      const order = await orderRepository.lockOrder(client, orderId);
+      if (!order) {
+        throw new AppError('Order not found', 404);
+      }
+      // Cancelled is final: leaving it would need the stock deducted again, which can fail
+      if (order.status === 'cancelled' && status !== 'cancelled') {
+        throw new AppError('A cancelled order cannot change its status', 409);
+      }
+
+      updated = await orderRepository.updateOrderStatus(orderId, status, client);
+
+      if (status === 'cancelled' && order.status !== 'cancelled') {
+        const items = await orderRepository.findOrderItems(orderId, client);
+        // Sorted by product: concurrent transactions lock rows in the same order (no deadlock)
+        items.sort((a, b) => a.product_id.localeCompare(b.product_id));
+        for (const item of items) {
+          await stockRepository.applyMovement(client, {
+            productId: item.product_id,
+            quantity: item.quantity,
+            reason: 'order_cancelled',
+            orderId,
+            createdBy: userId,
+          });
+        }
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
 
-    const updated = await orderRepository.updateOrderStatus(orderId, status);
     return withDetails(updated);
   },
 };

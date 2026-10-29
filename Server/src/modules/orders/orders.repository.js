@@ -79,8 +79,18 @@ export const orderRepository = {
     return rows[0] || null;
   },
 
-  findOrderItems: async (orderId) => {
-    const { rows } = await pool.query('SELECT * FROM order_items WHERE order_id = $1 ORDER BY id', [
+  /**
+   * Locks the order row until the transaction ends
+   * @param {import('pg').PoolClient} client - Transaction client
+   */
+  lockOrder: async (client, orderId) => {
+    const { rows } = await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+    return rows[0] || null;
+  },
+
+  findOrderItems: async (orderId, client) => {
+    const db = client || pool;
+    const { rows } = await db.query('SELECT * FROM order_items WHERE order_id = $1 ORDER BY id', [
       orderId,
     ]);
     return rows;
@@ -127,8 +137,9 @@ export const orderRepository = {
     return { orders: rows, total };
   },
 
-  updateOrderStatus: async (orderId, status) => {
-    const { rows } = await pool.query('UPDATE orders SET status = $2 WHERE id = $1 RETURNING *', [
+  updateOrderStatus: async (orderId, status, client) => {
+    const db = client || pool;
+    const { rows } = await db.query('UPDATE orders SET status = $2 WHERE id = $1 RETURNING *', [
       orderId,
       status,
     ]);
