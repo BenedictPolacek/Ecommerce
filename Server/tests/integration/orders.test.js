@@ -154,8 +154,9 @@ describe('Orders', () => {
       api().get(`/api/orders${query}`).set(authHeader(user.token));
     const listAll = (query = '') =>
       api().get(`/api/orders/all${query}`).set(authHeader(admin.token));
-    const setStatus = (order, status) =>
-      api().patch(`/api/orders/${order.id}/status`).set(authHeader(admin.token)).send({ status });
+    // 'paid' can only be reached by recording a payment
+    const pay = (order) =>
+      api().post(`/api/orders/${order.id}/payments`).set(authHeader(admin.token)).send({});
 
     it('returns summaries with item_count instead of items', async () => {
       const order = await placeOrder(customer);
@@ -196,7 +197,7 @@ describe('Orders', () => {
       const paid = await placeOrder(customer);
       const other = await createUser();
       await placeOrder(other);
-      await setStatus(paid, 'paid');
+      await pay(paid);
 
       const all = await listAll();
       const onlyPaid = await listAll('?status=paid');

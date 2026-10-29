@@ -5,6 +5,7 @@ import { cartRepository } from '../cart/cart.repository.js';
 import { paymentRepository } from '../payments/payment.repository.js';
 import { stockRepository } from '../stock/stock.repository.js';
 import { calculateOrderTotals } from './pricing.js';
+import { changeOrderStatus } from './order-status.js';
 import { isUuid } from '../../utils/uuid.js';
 import { paginationMeta, toOffset } from '../../utils/pagination.js';
 
@@ -29,13 +30,22 @@ const resolveAddress = async (client, userId, { address, addressId, label }) => 
   return { address_line1, address_line2, city, state, postal_code, country };
 };
 
+// Customers see the timeline only; who changed it and internal notes are for admins
+const toCustomerHistory = ({ from_status, to_status, created_at }) => ({
+  from_status,
+  to_status,
+  created_at,
+});
+
 // Full order as returned by the detail endpoints
-const withDetails = async (order) => {
-  const [items, payments] = await Promise.all([
+const withDetails = async (order, { isAdmin }) => {
+  const [items, payments, history] = await Promise.all([
     orderRepository.findOrderItems(order.id),
     paymentRepository.findByOrderId(order.id),
+    orderRepository.findStatusHistory(order.id),
   ]);
-  return { ...order, items, payments };
+  const status_history = isAdmin ? history : history.map(toCustomerHistory);
+  return { ...order, items, payments, status_history };
 };
 
 const listOrders = async ({ userId, status, page, limit }) => {
@@ -128,10 +138,17 @@ export const orderService = {
         billingAddress,
       });
 
-      // 5. Insert order items
+      // 5. First history entry: the order starts as pending
+      const historyEntry = await orderRepository.insertStatusHistory(client, {
+        orderId: order.id,
+        toStatus: order.status,
+        changedBy: userId,
+      });
+
+      // 6. Insert order items
       const insertedItems = await orderRepository.insertOrderItems(client, order.id, verifiedItems);
 
-      // 6. Deduct stock as 'sale' movements. Only now, because a sale references its order;
+      // 7. Deduct stock as 'sale' movements. Only now, because a sale references its order;
       //    the product rows are still locked (FOR UPDATE above) until COMMIT.
       for (const item of verifiedItems) {
         await stockRepository.applyMovement(client, {
@@ -143,16 +160,17 @@ export const orderService = {
         });
       }
 
-      // 7. Clear user cart items
+      // 8. Clear user cart items
       await cartRepository.clearCart(cart.id, client);
 
-      // 8. Commit transaction
+      // 9. Commit transaction
       await client.query('COMMIT');
 
       return {
         ...order,
         items: insertedItems,
         payments: [],
+        status_history: [toCustomerHistory(historyEntry)],
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -188,17 +206,19 @@ export const orderService = {
     }
     // Someone else's order gets the same 404 as a missing one: order numbers are
     // sequential, so a 403 would confirm which numbers exist (enumeration)
-    if (!order || (userRole !== 'admin' && order.user_id !== userId)) {
+    const isAdmin = userRole === 'admin';
+    if (!order || (!isAdmin && order.user_id !== userId)) {
       throw new AppError('Order not found', 404);
     }
 
-    return withDetails(order);
+    return withDetails(order, { isAdmin });
   },
 
   /**
-   * Update the status of an existing order (Admin only)
+   * Update the status of an existing order (Admin only).
+   * Allowed transitions: see order-status.js. The same status again is a no-op (idempotent).
    */
-  async updateOrderStatus(orderId, status, userId) {
+  async updateOrderStatus(orderId, { status, note }, userId) {
     const client = await pool.connect();
     let updated;
 
@@ -210,13 +230,14 @@ export const orderService = {
       if (!order) {
         throw new AppError('Order not found', 404);
       }
-      // Cancelled is final: leaving it would need the stock deducted again, which can fail
-      if (order.status === 'cancelled' && status !== 'cancelled') {
-        throw new AppError('A cancelled order cannot change its status', 409);
+
+      if (order.status === status) {
+        updated = order;
+      } else {
+        updated = await changeOrderStatus(client, order, status, { userId, note });
       }
 
-      updated = await orderRepository.updateOrderStatus(orderId, status, client);
-
+      // Only on the actual change to cancelled (not on a repeated request)
       if (status === 'cancelled' && order.status !== 'cancelled') {
         const items = await orderRepository.findOrderItems(orderId, client);
         // Sorted by product: concurrent transactions lock rows in the same order (no deadlock)
@@ -240,7 +261,7 @@ export const orderService = {
       client.release();
     }
 
-    return withDetails(updated);
+    return withDetails(updated, { isAdmin: true });
   },
 };
 

@@ -64,7 +64,7 @@ export const ordersController = {
    */
   updateStatus: catchAsync(async (req, res) => {
     const id = req.idParam || req.params.id;
-    const order = await orderService.updateOrderStatus(id, req.body.status, req.user.id);
+    const order = await orderService.updateOrderStatus(id, req.body, req.user.id);
     res.status(200).json({
       success: true,
       message: 'Order status updated successfully',

@@ -137,6 +137,9 @@ export const orderRepository = {
     return { orders: rows, total };
   },
 
+  /**
+   * Only called by changeOrderStatus (order-status.js), which also writes the history
+   */
   updateOrderStatus: async (orderId, status, client) => {
     const db = client || pool;
     const { rows } = await db.query('UPDATE orders SET status = $2 WHERE id = $1 RETURNING *', [
@@ -144,6 +147,30 @@ export const orderRepository = {
       status,
     ]);
     return rows[0] || null;
+  },
+
+  /**
+   * @param {import('pg').PoolClient} client - Transaction client
+   */
+  insertStatusHistory: async (client, { orderId, fromStatus, toStatus, changedBy, note }) => {
+    const { rows } = await client.query(
+      `INSERT INTO order_status_history (order_id, from_status, to_status, changed_by, note)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [orderId, fromStatus ?? null, toStatus, changedBy ?? null, note || null]
+    );
+    return rows[0];
+  },
+
+  /**
+   * Status history of an order, oldest first (reads like a timeline)
+   */
+  findStatusHistory: async (orderId) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM order_status_history WHERE order_id = $1 ORDER BY created_at, id`,
+      [orderId]
+    );
+    return rows;
   },
 };
 
