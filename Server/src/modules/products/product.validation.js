@@ -84,9 +84,12 @@ export const updateProductSchema = z
 
     // Stock only changes through the stock endpoints, which record a stock movement.
     // Rejected explicitly instead of silently stripped, so old clients notice.
-    stock_quantity: z.undefined({
-      error: 'stock_quantity cannot be updated here; use PATCH /api/products/:id/stock',
-    }),
+    // .optional() is required: in Zod 4 a key without it must be present, even for z.undefined().
+    stock_quantity: z
+      .undefined({
+        error: 'stock_quantity cannot be updated here; use PATCH /api/products/:id/stock',
+      })
+      .optional(),
 
     category_id: z.uuid('category_id must be a valid UUID').optional().nullable(),
 

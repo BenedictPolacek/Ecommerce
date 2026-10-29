@@ -4,6 +4,7 @@ import { createCategorySchema } from '../../src/modules/categories/category.vali
 import {
   createProductSchema,
   productQuerySchema,
+  updateProductSchema,
   updateStockSchema,
 } from '../../src/modules/products/product.validation.js';
 
@@ -35,6 +36,13 @@ describe('custom error messages', () => {
     expect(messagesFor(updateStockSchema, {})).toEqual(['stock_quantity is required']);
     expect(messagesFor(updateStockSchema, { stock_quantity: '5' })).toEqual([
       'Stock quantity must be a number',
+    ]);
+  });
+
+  it('rejects stock_quantity in a product update but does not require it', () => {
+    expect(updateProductSchema.safeParse({ name: 'New Name' }).success).toBe(true);
+    expect(messagesFor(updateProductSchema, { stock_quantity: 5 })).toEqual([
+      'stock_quantity cannot be updated here; use PATCH /api/products/:id/stock',
     ]);
   });
 
