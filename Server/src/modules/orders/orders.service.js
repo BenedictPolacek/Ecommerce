@@ -2,6 +2,7 @@ import pool from '../../config/db.js';
 import { AppError } from '../../utils/AppError.js';
 import { orderRepository } from './orders.repository.js';
 import { cartRepository } from '../cart/cart.repository.js';
+import { paymentRepository } from '../payments/payment.repository.js';
 import { calculateOrderTotals } from './pricing.js';
 import { isUuid } from '../../utils/uuid.js';
 import { paginationMeta, toOffset } from '../../utils/pagination.js';
@@ -25,6 +26,15 @@ const resolveAddress = async (client, userId, { address, addressId, label }) => 
   }
   const { address_line1, address_line2, city, state, postal_code, country } = rows[0];
   return { address_line1, address_line2, city, state, postal_code, country };
+};
+
+// Full order as returned by the detail endpoints
+const withDetails = async (order) => {
+  const [items, payments] = await Promise.all([
+    orderRepository.findOrderItems(order.id),
+    paymentRepository.findByOrderId(order.id),
+  ]);
+  return { ...order, items, payments };
 };
 
 const listOrders = async ({ userId, status, page, limit }) => {
@@ -121,8 +131,6 @@ export const orderService = {
         ...totals,
         shippingAddress,
         billingAddress,
-        paymentProvider: checkoutData.paymentProvider,
-        paymentId: checkoutData.paymentId,
       });
 
       // 5. Insert order items
@@ -137,6 +145,7 @@ export const orderService = {
       return {
         ...order,
         items: insertedItems,
+        payments: [],
       };
     } catch (error) {
       await client.query('ROLLBACK');
@@ -176,8 +185,7 @@ export const orderService = {
       throw new AppError('Order not found', 404);
     }
 
-    const items = await orderRepository.findOrderItems(order.id);
-    return { ...order, items };
+    return withDetails(order);
   },
 
   /**
@@ -190,8 +198,7 @@ export const orderService = {
     }
 
     const updated = await orderRepository.updateOrderStatus(orderId, status);
-    const items = await orderRepository.findOrderItems(orderId);
-    return { ...updated, items };
+    return withDetails(updated);
   },
 };
 

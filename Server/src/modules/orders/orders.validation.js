@@ -17,8 +17,8 @@ export const checkoutSchema = z
     // Optional: without one, the billing address is the shipping address
     billingAddress: shippingAddressSchema.optional(),
     billingAddressId: z.uuid('Invalid billing address UUID').optional(),
-    paymentProvider: z.string().trim().max(50).optional(),
-    paymentId: z.string().trim().max(255).optional(),
+    // No payment fields: the client must never be able to claim that it has paid.
+    // Payments are created on the server (see modules/payments).
   })
   .refine((data) => data.shippingAddress !== undefined || data.addressId !== undefined, {
     error: 'Please provide either a shippingAddress object or an existing addressId',
