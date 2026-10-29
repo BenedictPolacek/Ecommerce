@@ -17,17 +17,14 @@ export const orderRepository = {
       vatRatePercent,
       shippingAddress,
       billingAddress,
-      paymentProvider,
-      paymentId,
     }
   ) => {
     const db = client || pool;
     // order_number and currency are filled in by column defaults
     const { rows } = await db.query(
       `INSERT INTO orders (user_id, subtotal_cents, tax_cents, shipping_fee_cents, total_cents,
-                           vat_rate_percent, shipping_address, billing_address,
-                           payment_provider, payment_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                           vat_rate_percent, shipping_address, billing_address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         userId,
@@ -38,8 +35,6 @@ export const orderRepository = {
         vatRatePercent,
         JSON.stringify(shippingAddress),
         JSON.stringify(billingAddress),
-        paymentProvider || null,
-        paymentId || null,
       ]
     );
     return rows[0];

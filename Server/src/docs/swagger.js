@@ -568,6 +568,10 @@ export const swaggerSpec = {
             type: 'array',
             items: { $ref: '#/components/schemas/OrderItem' },
           },
+          payments: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Payment' },
+          },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
         },
@@ -589,8 +593,46 @@ export const swaggerSpec = {
             $ref: '#/components/schemas/CreateAddressRequest',
             description: 'Optional. Without billingAddress/billingAddressId, billing = shipping',
           },
-          paymentProvider: { type: 'string', example: 'stripe' },
-          paymentId: { type: 'string', example: 'pi_3MtwBwLkdIwHu7ix28a3tqPa' },
+        },
+      },
+      Payment: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          order_id: { type: 'string', format: 'uuid' },
+          provider: { type: 'string', example: 'manual' },
+          provider_payment_id: { type: 'string', nullable: true, example: 'SEPA-2026-0042' },
+          status: {
+            type: 'string',
+            enum: ['pending', 'succeeded', 'failed', 'cancelled', 'refunded'],
+            example: 'succeeded',
+          },
+          amount_cents: { type: 'integer', example: 2599 },
+          currency: { type: 'string', example: 'EUR', description: 'Always the order currency' },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      RecordPaymentRequest: {
+        type: 'object',
+        properties: {
+          provider: {
+            type: 'string',
+            default: 'manual',
+            example: 'bank_transfer',
+            description: 'Lowercase letters, digits and underscores',
+          },
+          providerPaymentId: {
+            type: 'string',
+            example: 'SEPA-2026-0042',
+            description: 'Optional reference; unique per provider',
+          },
+          amountCents: {
+            type: 'integer',
+            minimum: 1,
+            example: 2599,
+            description: 'Defaults to the outstanding balance of the order',
+          },
         },
       },
       UpdateOrderStatusRequest: {
@@ -1782,6 +1824,65 @@ export const swaggerSpec = {
           401: { $ref: '#/components/responses/UnauthorizedError' },
           403: { $ref: '#/components/responses/ForbiddenError' },
           404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/orders/{id}/payments': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Record a manual payment, e.g. a bank transfer (Admin only)',
+        description:
+          'Only for orders with status `pending`. Once the succeeded payments cover the order total, the order status becomes `paid`.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Order UUID',
+          },
+        ],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RecordPaymentRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Payment recorded',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        payment: { $ref: '#/components/schemas/Payment' },
+                        orderStatus: { type: 'string', example: 'paid' },
+                        outstandingCents: { type: 'integer', example: 0 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+          409: {
+            description:
+              'Order is not pending, the amount exceeds the outstanding balance, or the provider reference already exists',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+            },
+          },
         },
       },
     },

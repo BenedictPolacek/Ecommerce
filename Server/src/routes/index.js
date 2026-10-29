@@ -5,6 +5,7 @@ import categoryRoutes from '../modules/categories/category.routes.js';
 import productRoutes from '../modules/products/product.routes.js';
 import cartRoutes from '../modules/cart/cart.routes.js';
 import orderRoutes from '../modules/orders/orders.routes.js';
+import paymentRoutes from '../modules/payments/payment.routes.js';
 import addressRoutes from '../modules/addresses/address.routes.js';
 
 import swaggerUi from 'swagger-ui-express';
@@ -46,6 +47,7 @@ router.use('/users', userRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/cart', cartRoutes);
+router.use('/orders/:id/payments', paymentRoutes);
 router.use('/orders', orderRoutes);
 router.use('/addresses', addressRoutes);
 

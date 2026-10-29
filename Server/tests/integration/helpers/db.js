@@ -2,6 +2,7 @@ import pool from '../../../src/config/db.js';
 
 // Every table except pgmigrations, which must survive so the schema stays in place
 const TABLES = [
+  'payments',
   'order_items',
   'orders',
   'cart_items',
