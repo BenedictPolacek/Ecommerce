@@ -48,6 +48,15 @@ export async function seed() {
       if (rows.length === 0) continue;
       insertedProducts += 1;
 
+      // Opening balance in the stock ledger, so SUM(movements) = stock_quantity
+      if (product.stock_quantity > 0) {
+        await client.query(
+          `INSERT INTO stock_movements (product_id, quantity, balance_after, reason, note)
+           VALUES ($1, $2, $2, 'initial', 'Seed data')`,
+          [rows[0].id, product.stock_quantity]
+        );
+      }
+
       // Placeholder image service, stands in for a real CDN
       await client.query(
         `INSERT INTO product_images (product_id, url, alt_text, sort_order) VALUES ($1, $2, $3, 0)`,

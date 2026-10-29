@@ -1,3 +1,4 @@
+import pool from '../../config/db.js';
 import { AppError } from '../../utils/AppError.js';
 import { paginationMeta, toOffset } from '../../utils/pagination.js';
 import { slugify } from '../../utils/slug.js';
@@ -5,6 +6,8 @@ import { isUuid } from '../../utils/uuid.js';
 import { productRepository } from './product.repository.js';
 import { productImageRepository } from './product-image.repository.js';
 import { categoryRepository } from '../categories/category.repository.js';
+import { stockRepository } from '../stock/stock.repository.js';
+import { stockService } from '../stock/stock.service.js';
 
 export const MAX_IMAGES_PER_PRODUCT = 10;
 
@@ -87,7 +90,7 @@ export const productService = {
     return product;
   },
 
-  async createProduct(data) {
+  async createProduct(data, userId) {
     if (data.sku && (await productRepository.findBySku(data.sku))) {
       throw new AppError('SKU already exists', 409);
     }
@@ -102,7 +105,28 @@ export const productService = {
       slug = await generateSlug(data.name);
     }
 
-    const created = await productRepository.create({ ...data, slug });
+    // Product and its opening stock movement are written together or not at all
+    const client = await pool.connect();
+    let created;
+    try {
+      await client.query('BEGIN');
+      created = await productRepository.create({ ...data, slug }, client);
+      if (data.stock_quantity > 0) {
+        await stockRepository.applyMovement(client, {
+          productId: created.id,
+          quantity: data.stock_quantity,
+          reason: 'initial',
+          createdBy: userId,
+        });
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
     // Same shape as GET /products/:id (category_name, images)
     return productRepository.findById(created.id);
   },
@@ -127,14 +151,12 @@ export const productService = {
     return productRepository.findById(id);
   },
 
-  async updateStock(id, stock_quantity) {
-    const qty =
-      typeof stock_quantity === 'object' && stock_quantity !== null
-        ? stock_quantity.stock_quantity
-        : stock_quantity;
-    const product = await productRepository.updateStock(id, qty);
-    if (!product) throw new AppError('Product not found', 404);
-    return product;
+  /**
+   * Inventory count: sets the absolute stock, the difference is logged as an adjustment
+   */
+  async updateStock(id, { stock_quantity, note }, userId) {
+    await stockService.setStock(id, { stock_quantity, note }, userId);
+    return getProductOrFail(id);
   },
 
   async deleteProduct(id) {

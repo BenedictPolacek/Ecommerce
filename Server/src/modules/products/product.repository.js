@@ -150,21 +150,14 @@ export const productRepository = {
   },
 
   /**
-   * Create a new product.
+   * Create a new product with stock 0; the opening stock is booked as an 'initial' movement.
+   * @param {import('pg').PoolClient} [client] - Optional transaction client
    */
-  async create({
-    name,
-    slug,
-    sku,
-    description,
-    price_cents,
-    stock_quantity,
-    category_id,
-    is_active,
-  }) {
+  async create({ name, slug, sku, description, price_cents, category_id, is_active }, client) {
+    const db = client || pool;
     const query = `
-      INSERT INTO products (name, slug, sku, description, price_cents, stock_quantity, category_id, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO products (name, slug, sku, description, price_cents, category_id, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING ${RETURNING}
     `;
     const values = [
@@ -173,22 +166,19 @@ export const productRepository = {
       sku ? sku.trim() : null,
       description ? description.trim() : null,
       price_cents,
-      stock_quantity ?? 0,
       category_id ?? null,
       is_active ?? true,
     ];
-    const result = await pool.query(query, values);
+    const result = await db.query(query, values);
     return result.rows[0];
   },
 
   /**
    * Update product fields — only provided (non-undefined) fields are changed.
    * Uses COALESCE to keep existing values for omitted fields.
+   * stock_quantity is not updatable here: stock changes go through the stock module's ledger.
    */
-  async update(
-    id,
-    { name, slug, sku, description, price_cents, stock_quantity, category_id, is_active }
-  ) {
+  async update(id, { name, slug, sku, description, price_cents, category_id, is_active }) {
     const query = `
       UPDATE products
       SET
@@ -196,11 +186,10 @@ export const productRepository = {
         sku            = COALESCE($2, sku),
         description    = COALESCE($3, description),
         price_cents    = COALESCE($4, price_cents),
-        stock_quantity = COALESCE($5, stock_quantity),
-        category_id    = COALESCE($6, category_id),
-        is_active      = COALESCE($7, is_active),
-        slug           = COALESCE($8, slug)
-      WHERE id = $9
+        category_id    = COALESCE($5, category_id),
+        is_active      = COALESCE($6, is_active),
+        slug           = COALESCE($7, slug)
+      WHERE id = $8
       RETURNING ${RETURNING}
     `;
     const values = [
@@ -208,27 +197,12 @@ export const productRepository = {
       sku !== undefined ? (sku ? sku.trim() : null) : null,
       description !== undefined ? (description ? description.trim() : null) : null,
       price_cents !== undefined ? price_cents : null,
-      stock_quantity !== undefined ? stock_quantity : null,
       category_id !== undefined ? category_id : null,
       is_active !== undefined ? is_active : null,
       slug ?? null,
       id,
     ];
     const result = await pool.query(query, values);
-    return result.rows[0] || null;
-  },
-
-  /**
-   * Set stock_quantity directly (dedicated stock update).
-   */
-  async updateStock(id, stock_quantity) {
-    const query = `
-      UPDATE products
-      SET stock_quantity = $1
-      WHERE id = $2
-      RETURNING id, name, sku, stock_quantity, updated_at
-    `;
-    const result = await pool.query(query, [stock_quantity, id]);
     return result.rows[0] || null;
   },
 

@@ -82,11 +82,11 @@ export const updateProductSchema = z
       .min(0, 'price_cents cannot be negative')
       .optional(),
 
-    stock_quantity: z
-      .number({ error: 'Stock quantity must be a number' })
-      .int('Stock quantity must be a whole number')
-      .min(0, 'Stock quantity cannot be negative')
-      .optional(),
+    // Stock only changes through the stock endpoints, which record a stock movement.
+    // Rejected explicitly instead of silently stripped, so old clients notice.
+    stock_quantity: z.undefined({
+      error: 'stock_quantity cannot be updated here; use PATCH /api/products/:id/stock',
+    }),
 
     category_id: z.uuid('category_id must be a valid UUID').optional().nullable(),
 
@@ -98,10 +98,12 @@ export const updateProductSchema = z
 
 // ─── Stock update ─────────────────────────────────────────────────────────────
 
+// Absolute stock after an inventory count; the difference is logged as an 'adjustment' movement
 export const updateStockSchema = z.object({
   stock_quantity: requiredNumber('stock_quantity is required', 'Stock quantity must be a number')
     .int('Stock quantity must be a whole number')
     .min(0, 'Stock quantity cannot be negative'),
+  note: z.string().trim().min(1).max(500).optional(),
 });
 
 // ─── Images ───────────────────────────────────────────────────────────────────

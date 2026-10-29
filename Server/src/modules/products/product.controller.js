@@ -31,7 +31,7 @@ export const productController = {
   }),
 
   create: catchAsync(async (req, res) => {
-    const product = await productService.createProduct(req.body);
+    const product = await productService.createProduct(req.body, req.user.id);
 
     res.status(201).json({
       success: true,
@@ -51,9 +51,7 @@ export const productController = {
 
   updateStock: catchAsync(async (req, res) => {
     const id = req.idParam || req.params.id;
-    const stockQuantity =
-      req.body.stock_quantity !== undefined ? req.body.stock_quantity : req.body;
-    const product = await productService.updateStock(id, stockQuantity);
+    const product = await productService.updateStock(id, req.body, req.user.id);
 
     res.status(200).json({
       success: true,
