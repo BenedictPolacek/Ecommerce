@@ -23,7 +23,7 @@ const setAuthCookies = (res, { token, refreshToken }) => {
     });
 };
 
-const clearAuthCookies = (res) => {
+export const clearAuthCookies = (res) => {
   res
     .clearCookie('token', baseCookieOptions())
     .clearCookie('refresh_token', { ...baseCookieOptions(), path: REFRESH_COOKIE_PATH });

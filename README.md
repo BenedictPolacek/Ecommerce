@@ -19,6 +19,7 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 - Products and categories (admin-managed)
 - Shopping cart and checkout
 - Orders and addresses
+- GDPR account deletion (anonymization when orders must be kept)
 - Interactive API docs via Swagger
 
 ## Project structure

@@ -48,6 +48,18 @@ export const passwordResetMail = ({ to, firstName, link }) => ({
   }),
 });
 
+export const accountDeletedMail = ({ to, firstName }) => ({
+  to,
+  subject: 'Your account has been deleted',
+  ...layout({
+    firstName,
+    paragraphs: [
+      'Your account and its personal data have been deleted.',
+      'Past orders are kept as long as the law requires us to keep invoices.',
+    ],
+  }),
+});
+
 export const passwordChangedMail = ({ to, firstName }) => ({
   to,
   subject: 'Your password was changed',
