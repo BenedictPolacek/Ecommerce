@@ -31,6 +31,22 @@ const envSchema = z.object({
   // Frontend base URL; links in emails point there (e.g. /verify-email?token=...)
   APP_URL: z.url().default('http://localhost:3000'),
 
+  // Browser origins allowed to call the API with cookies, comma-separated. Defaults to APP_URL.
+  // Never "any origin": with credentials, every website could act as the logged-in user.
+  CORS_ORIGINS: z
+    .string()
+    .transform((value) => value.split(',').map((origin) => origin.trim()))
+    .pipe(z.array(z.url()))
+    .optional(),
+
+  // Number of reverse proxies in front of the app (Render, Nginx, load balancer: usually 1).
+  // Needed so req.ip is the client's IP from X-Forwarded-For, not the proxy's.
+  // 0 = no proxy: the header is ignored, otherwise clients could fake their IP with it.
+  TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
+
+  // Off in .env.test only: the test suites log in far more often than any real user
+  RATE_LIMIT_ENABLED: z.enum(['true', 'false']).default('true'),
+
   // Outgoing email. Defaults match Mailpit from docker-compose.yml (catches all mails locally)
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
@@ -67,6 +83,9 @@ export const parseEnv = (rawEnv) => {
   }
 
   const env = result.data;
+  const stripTrailingSlash = (url) => url.replace(/\/+$/, '');
+  const appUrl = stripTrailingSlash(env.APP_URL);
+
   return {
     port: env.PORT,
     nodeEnv: env.NODE_ENV,
@@ -87,7 +106,11 @@ export const parseEnv = (rawEnv) => {
     bcrypt: {
       saltRounds: env.BCRYPT_SALT_ROUNDS,
     },
-    appUrl: env.APP_URL.replace(/\/+$/, ''),
+    appUrl,
+    // The browser sends the Origin header without a trailing slash
+    corsOrigins: env.CORS_ORIGINS?.map(stripTrailingSlash) ?? [appUrl],
+    trustProxy: env.TRUST_PROXY,
+    rateLimitEnabled: env.RATE_LIMIT_ENABLED === 'true',
     mail: {
       from: env.MAIL_FROM,
       smtp: {

@@ -124,6 +124,19 @@ export const swaggerSpec = {
           },
         },
       },
+      TooManyRequestsError: {
+        description:
+          'Rate limit reached (10 requests per 15 minutes per IP for login, registration and email links). The `RateLimit` header tells when to retry.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+            example: {
+              success: false,
+              message: 'Too many attempts. Please try again in 15 minutes.',
+            },
+          },
+        },
+      },
       ValidationError: {
         description: 'Request validation failed',
         content: {
@@ -859,6 +872,7 @@ export const swaggerSpec = {
               },
             },
           },
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },
@@ -895,6 +909,7 @@ export const swaggerSpec = {
               },
             },
           },
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },
@@ -1076,6 +1091,7 @@ export const swaggerSpec = {
             'Validation failed, or the token is unknown, used or expired',
             'Invalid or expired verification link. Please request a new one.'
           ),
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },
@@ -1121,6 +1137,7 @@ export const swaggerSpec = {
             'If an account with this email exists, we have sent a password reset link.'
           ),
           400: { $ref: '#/components/responses/ValidationError' },
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },
@@ -1154,6 +1171,7 @@ export const swaggerSpec = {
             'Validation failed, or the token is unknown, used or expired',
             'Invalid or expired password reset link. Please request a new one.'
           ),
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },

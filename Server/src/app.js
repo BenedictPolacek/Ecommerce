@@ -6,16 +6,22 @@ import cookieParser from 'cookie-parser';
 import { config } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { apiLimiter } from './middleware/rateLimit.js';
 
 const app = express();
+
+// Behind a reverse proxy: take req.ip from X-Forwarded-For (rate limiting counts per IP)
+app.set('trust proxy', config.trustProxy);
 
 // Security middleware
 
 app.use(helmet());
 
+// Only the own frontend may send credentialed requests. Other origins get no CORS headers,
+// so the browser blocks their access. Requests without Origin (curl, Postman) are not affected.
 app.use(
   cors({
-    origin: true,
+    origin: config.corsOrigins,
     credentials: true,
   })
 );
@@ -46,7 +52,7 @@ app.get('/', (req, res) => {
 });
 
 // Register API routes
-app.use('/api', apiRoutes);
+app.use('/api', apiLimiter, apiRoutes);
 
 // Catch 404 for undefined routes
 app.use((req, res) => {
