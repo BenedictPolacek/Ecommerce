@@ -139,6 +139,56 @@ export const authController = {
       message: 'Session ended',
     });
   }),
+
+  /**
+   * Confirm the email address with the token from the email link
+   * POST /api/auth/verify-email
+   */
+  verifyEmail: catchAsync(async (req, res) => {
+    await authService.verifyEmail(req.body.token);
+    res.status(200).json({
+      success: true,
+      message: 'Email address verified',
+    });
+  }),
+
+  /**
+   * Send a new verification email to the current user
+   * POST /api/auth/verify-email/resend
+   */
+  resendVerification: catchAsync(async (req, res) => {
+    await authService.resendVerification(req.user.id);
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent',
+    });
+  }),
+
+  /**
+   * Request a password reset link. Same answer whether or not the account exists.
+   * POST /api/auth/forgot-password
+   */
+  forgotPassword: catchAsync(async (req, res) => {
+    await authService.forgotPassword(req.body.email);
+    res.status(200).json({
+      success: true,
+      message: 'If an account with this email exists, we have sent a password reset link.',
+    });
+  }),
+
+  /**
+   * Set a new password with the token from the reset link; ends all sessions
+   * POST /api/auth/reset-password
+   */
+  resetPassword: catchAsync(async (req, res) => {
+    await authService.resetPassword(req.body);
+    // This browser's session was revoked as well
+    clearAuthCookies(res);
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset. Please log in with your new password.',
+    });
+  }),
 };
 
 export default authController;

@@ -130,4 +130,25 @@ export const authorize = (...roles) => {
   };
 };
 
-export default { authenticate, optionalAuthenticate, authorize };
+/**
+ * Blocks users whose email address is not confirmed yet (used for checkout).
+ * Reads the live value from the DB, so verifying takes effect without a new token.
+ * Must run after authenticate.
+ */
+export const requireVerifiedEmail = async (req, res, next) => {
+  const user = await userRepository.findById(req.user.id);
+  if (!user) {
+    return next(new AppError('User no longer exists. Please log in again.', 401));
+  }
+  if (!user.email_verified_at) {
+    return next(
+      new AppError(
+        'Please verify your email address first. A new link can be requested via POST /api/auth/verify-email/resend.',
+        403
+      )
+    );
+  }
+  next();
+};
+
+export default { authenticate, optionalAuthenticate, authorize, requireVerifiedEmail };

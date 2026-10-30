@@ -1,4 +1,5 @@
-import { registerSchema } from '../../src/modules/auth/auth.validation.js';
+import { registerSchema, resetPasswordSchema } from '../../src/modules/auth/auth.validation.js';
+import { changePasswordSchema } from '../../src/modules/users/user.validation.js';
 import { createAddressSchema } from '../../src/modules/addresses/address.validation.js';
 import { createCategorySchema } from '../../src/modules/categories/category.validation.js';
 import {
@@ -97,5 +98,22 @@ describe('transforms and defaults', () => {
     expect(messagesFor(createProductSchema, { name: 'Mouse', price_cents: 19.99 })).toEqual([
       'price_cents must be a whole number of cents',
     ]);
+  });
+});
+
+describe('password schemas', () => {
+  it('applies the same password rules on reset as on registration', () => {
+    expect(messagesFor(resetPasswordSchema, { token: 'abc', password: '123' })).toEqual([
+      'Password must be at least 6 characters long',
+    ]);
+  });
+
+  it('requires a new password that differs from the current one', () => {
+    expect(
+      messagesFor(changePasswordSchema, { currentPassword: 'secret1', newPassword: 'secret1' })
+    ).toEqual(['New password must be different from the current password']);
+    expect(
+      changePasswordSchema.safeParse({ currentPassword: 'secret1', newPassword: 'secret2' }).success
+    ).toBe(true);
   });
 });

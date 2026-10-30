@@ -1,4 +1,5 @@
 import { catchAsync } from '../../utils/catchAsync.js';
+import { authService } from '../auth/auth.service.js';
 import { userService } from './user.service.js';
 
 export const userController = {
@@ -24,6 +25,21 @@ export const userController = {
       success: true,
       message: 'Profile updated successfully',
       data: { user: updatedUser },
+    });
+  }),
+
+  /**
+   * Change the password (current one required); logs out the user's other devices
+   * PATCH /api/users/me/password
+   */
+  changePassword: catchAsync(async (req, res) => {
+    await authService.changePassword(
+      { userId: req.user.id, sessionId: req.user.sessionId },
+      req.body
+    );
+    res.status(200).json({
+      success: true,
+      message: 'Password changed. Your other devices have been logged out.',
     });
   }),
 };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, authorize, requireVerifiedEmail } from '../../middleware/auth.js';
 import validate, { validateIdParam } from '../../middleware/validate.js';
 import * as controller from './orders.controller.js';
 import { checkoutSchema, updateOrderStatusSchema } from './orders.validation.js';
@@ -9,8 +9,8 @@ const router = Router();
 // All order endpoints require authentication
 router.use(authenticate);
 
-// Checkout (create order from cart)
-router.post('/', validate(checkoutSchema), controller.checkout);
+// Checkout (create order from cart); only with a confirmed email address
+router.post('/', requireVerifiedEmail, validate(checkoutSchema), controller.checkout);
 
 // Get current user's order history
 router.get('/', controller.listMyOrders);

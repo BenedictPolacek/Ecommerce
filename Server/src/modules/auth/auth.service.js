@@ -1,11 +1,15 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../../config/db.js';
 import { config } from '../../config/env.js';
+import { sendMailInBackground } from '../../mail/mailer.js';
+import { passwordChangedMail } from '../../mail/templates.js';
 import { AppError } from '../../utils/AppError.js';
+import { withTransaction } from '../../utils/transaction.js';
 import { userRepository } from '../users/user.repository.js';
+import { prepareTokenMail, recentlySent } from './account-emails.js';
 import { sessionRepository } from './session.repository.js';
-import { generateRefreshToken, hashToken, refreshTokenTtlMs, signAccessToken } from './tokens.js';
+import { userTokenRepository } from './user-token.repository.js';
+import { generateToken, hashToken, refreshTokenTtlMs, signAccessToken } from './tokens.js';
 
 const newExpiry = () => new Date(Date.now() + refreshTokenTtlMs());
 
@@ -14,7 +18,7 @@ const newExpiry = () => new Date(Date.now() + refreshTokenTtlMs());
  * @param {import('pg').PoolClient} client - Transaction client
  */
 const issueRefreshToken = async (client, sessionId) => {
-  const refreshToken = generateRefreshToken();
+  const refreshToken = generateToken();
   await sessionRepository.insertRefreshToken(client, {
     sessionId,
     tokenHash: hashToken(refreshToken),
@@ -36,21 +40,6 @@ const startSession = async (client, user, userAgent) => {
   return { token: signAccessToken(user, session.id), refreshToken };
 };
 
-const withTransaction = async (fn) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
 const invalidRefreshToken = () =>
   new AppError('Invalid or expired refresh token. Please log in again.', 401);
 
@@ -68,8 +57,8 @@ export const authService = {
     // 2. Hash password
     const password_hash = await bcrypt.hash(password, config.bcrypt.saltRounds);
 
-    // 3. Create user, cart and session atomically in a transaction
-    return withTransaction(async (client) => {
+    // 3. Create user, cart, session and verification token atomically in a transaction
+    const { verificationMail, ...result } = await withTransaction(async (client) => {
       const user = await userRepository.create(
         {
           email,
@@ -85,8 +74,13 @@ export const authService = {
       await client.query('INSERT INTO carts (user_id) VALUES ($1)', [user.id]);
 
       const tokens = await startSession(client, user, userAgent);
-      return { user, ...tokens };
+      const verificationMail = await prepareTokenMail(user, 'email_verification', client);
+      return { user, ...tokens, verificationMail };
     });
+
+    // Only after COMMIT: a rolled-back registration must not send a link
+    sendMailInBackground(verificationMail);
+    return result;
   },
 
   /**
@@ -112,6 +106,7 @@ export const authService = {
       first_name: user.first_name,
       last_name: user.last_name,
       role: user.role,
+      email_verified_at: user.email_verified_at,
       created_at: user.created_at,
       updated_at: user.updated_at,
     };
@@ -209,6 +204,104 @@ export const authService = {
       reason: 'session_ended',
     });
     if (!revoked) throw new AppError('Session not found', 404);
+  },
+
+  /**
+   * Confirms the email address with the token from the verification link
+   */
+  async verifyEmail(token) {
+    await withTransaction(async (client) => {
+      const userId = await userTokenRepository.consume(client, {
+        tokenHash: hashToken(token),
+        purpose: 'email_verification',
+      });
+      if (!userId) {
+        throw new AppError('Invalid or expired verification link. Please request a new one.', 400);
+      }
+      await userRepository.markEmailVerified(userId, client);
+    });
+  },
+
+  /**
+   * Sends a new verification link; older links stop working
+   */
+  async resendVerification(userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+    if (user.email_verified_at) throw new AppError('Email address is already verified', 400);
+    if (await recentlySent(user.id, 'email_verification')) {
+      throw new AppError('Please wait a minute before requesting another email.', 429);
+    }
+
+    sendMailInBackground(await prepareTokenMail(user, 'email_verification'));
+  },
+
+  /**
+   * Sends a reset link if the account exists. The caller always gets the same answer,
+   * so nobody can find out which email addresses are registered (account enumeration).
+   */
+  async forgotPassword(email) {
+    const user = await userRepository.findByEmail(email);
+    if (!user) return;
+    // Silently skipped as well: an error here would reveal that the account exists
+    if (await recentlySent(user.id, 'password_reset')) return;
+
+    sendMailInBackground(await prepareTokenMail(user, 'password_reset'));
+  },
+
+  /**
+   * Sets a new password with the token from the reset link and logs out every device
+   */
+  async resetPassword({ token, password }) {
+    // Hash before the transaction: bcrypt is slow on purpose and must not hold it open
+    const passwordHash = await bcrypt.hash(password, config.bcrypt.saltRounds);
+
+    const user = await withTransaction(async (client) => {
+      const userId = await userTokenRepository.consume(client, {
+        tokenHash: hashToken(token),
+        purpose: 'password_reset',
+      });
+      if (!userId) {
+        throw new AppError(
+          'Invalid or expired password reset link. Please request a new one.',
+          400
+        );
+      }
+
+      const updated = await userRepository.updatePassword(userId, passwordHash, client);
+      // Opening the link proved access to the mailbox
+      await userRepository.markEmailVerified(userId, client);
+      // Whoever knew the old password (maybe an attacker) is logged out everywhere
+      await sessionRepository.revokeAllForUser(userId, 'password_reset', { client });
+      return updated;
+    });
+
+    sendMailInBackground(passwordChangedMail({ to: user.email, firstName: user.first_name }));
+  },
+
+  /**
+   * Logged-in password change. Requires the current password, so a stolen session
+   * alone cannot lock the owner out. Other devices are logged out, this one stays.
+   */
+  async changePassword({ userId, sessionId }, { currentPassword, newPassword }) {
+    const currentHash = await userRepository.findPasswordHashById(userId);
+    if (!currentHash) throw new AppError('User not found', 404);
+    // 400, not 401: the user is logged in, only the entered password is wrong
+    if (!(await bcrypt.compare(currentPassword, currentHash))) {
+      throw new AppError('Current password is incorrect', 400);
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
+    const user = await withTransaction(async (client) => {
+      const updated = await userRepository.updatePassword(userId, passwordHash, client);
+      await sessionRepository.revokeAllForUser(userId, 'password_changed', {
+        exceptSessionId: sessionId,
+        client,
+      });
+      return updated;
+    });
+
+    sendMailInBackground(passwordChangedMail({ to: user.email, firstName: user.first_name }));
   },
 };
 

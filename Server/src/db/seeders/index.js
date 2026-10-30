@@ -70,8 +70,8 @@ export async function seed() {
 
     const passwordHash = await bcrypt.hash(config.seed.adminPassword, config.bcrypt.saltRounds);
     const { rowCount: insertedAdmin } = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, role)
-       VALUES ($1, $2, 'Admin', 'User', 'admin')
+      `INSERT INTO users (email, password_hash, first_name, last_name, role, email_verified_at)
+       VALUES ($1, $2, 'Admin', 'User', 'admin', CURRENT_TIMESTAMP)
        ON CONFLICT (email) DO NOTHING`,
       [config.seed.adminEmail.toLowerCase(), passwordHash]
     );

@@ -52,3 +52,18 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ JWT_SECRET: validSecret, PORT: 'abc' })).toThrow(/PORT/);
   });
 });
+
+describe('parseEnv mail settings', () => {
+  it('defaults to Mailpit and strips a trailing slash from APP_URL', () => {
+    const config = parseEnv({ JWT_SECRET: validSecret, APP_URL: 'https://shop.example.com/' });
+    expect(config.appUrl).toBe('https://shop.example.com');
+    expect(config.mail.smtp).toMatchObject({ host: 'localhost', port: 1025, secure: false });
+  });
+
+  it('reads SMTP_SECURE=false as false (not as a truthy string)', () => {
+    expect(parseEnv({ JWT_SECRET: validSecret, SMTP_SECURE: 'false' }).mail.smtp.secure).toBe(
+      false
+    );
+    expect(parseEnv({ JWT_SECRET: validSecret, SMTP_SECURE: 'true' }).mail.smtp.secure).toBe(true);
+  });
+});

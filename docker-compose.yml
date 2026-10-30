@@ -20,5 +20,15 @@ services:
       timeout: 5s
       retries: 10
 
+  # Fake mail server: catches every mail the API sends, nothing reaches real inboxes.
+  # Read them at http://localhost:8025
+  mail:
+    image: axllent/mailpit:v1.27
+    container_name: ecommerce-mail
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP (SMTP_HOST/SMTP_PORT in Server/.env)
+      - "8025:8025" # Web UI
+
 volumes:
   db-data:

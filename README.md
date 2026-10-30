@@ -9,12 +9,13 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 - **Backend:** Node.js, Express, PostgreSQL (`pg`), Zod, JWT auth
 - **Testing:** Jest, Supertest
 - **CI:** GitHub Actions
-- **Local dev:** Docker Compose (PostgreSQL)
+- **Local dev:** Docker Compose (PostgreSQL, Mailpit for emails)
 - **Frontend:** coming soon
 
 ## Features (API)
 
-- User registration and login (JWT in httpOnly cookie)
+- Registration and login with short-lived access tokens and rotating refresh tokens (httpOnly cookies), session management
+- Email verification, password reset and password change (emails via Nodemailer)
 - Products and categories (admin-managed)
 - Shopping cart and checkout
 - Orders and addresses
@@ -32,7 +33,7 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 Requirements: Node.js 24 (see [`.nvmrc`](.nvmrc), run `nvm use`), Docker (or a local PostgreSQL instance).
 
 ```bash
-docker compose up -d   # starts PostgreSQL on localhost:5433
+docker compose up -d   # starts PostgreSQL on localhost:5433 and Mailpit
 cd Server
 cp .env.example .env   # then adjust the values
 npm install
@@ -42,6 +43,8 @@ npm run dev            # starts the API on http://localhost:5000
 ```
 
 API docs: http://localhost:5000/api/docs
+
+Emails (verification, password reset) are caught by Mailpit: http://localhost:8025. Nothing is sent to real inboxes.
 
 Without Docker: point `PGPORT` in `Server/.env` to your local PostgreSQL (usually `5432`).
 

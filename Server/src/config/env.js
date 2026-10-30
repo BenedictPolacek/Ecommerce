@@ -28,6 +28,18 @@ const envSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
 
+  // Frontend base URL; links in emails point there (e.g. /verify-email?token=...)
+  APP_URL: z.url().default('http://localhost:3000'),
+
+  // Outgoing email. Defaults match Mailpit from docker-compose.yml (catches all mails locally)
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  // z.coerce.boolean() would turn the string "false" into true
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  MAIL_FROM: z.string().default('Ecommerce <no-reply@example.com>'),
+
   // Pricing. Amounts in cents; product prices include VAT (EU gross prices)
   VAT_RATE_PERCENT: z.coerce.number().int().min(0).max(100).default(19),
   SHIPPING_FEE_CENTS: z.coerce.number().int().min(0).default(499),
@@ -74,6 +86,17 @@ export const parseEnv = (rawEnv) => {
     },
     bcrypt: {
       saltRounds: env.BCRYPT_SALT_ROUNDS,
+    },
+    appUrl: env.APP_URL.replace(/\/+$/, ''),
+    mail: {
+      from: env.MAIL_FROM,
+      smtp: {
+        host: env.SMTP_HOST,
+        port: env.SMTP_PORT,
+        secure: env.SMTP_SECURE === 'true',
+        user: env.SMTP_USER,
+        password: env.SMTP_PASSWORD,
+      },
     },
     pricing: {
       vatRatePercent: env.VAT_RATE_PERCENT,
