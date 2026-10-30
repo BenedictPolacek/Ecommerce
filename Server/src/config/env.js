@@ -22,7 +22,10 @@ const envSchema = z.object({
 
   // No fallback on purpose: a guessable secret would let anyone forge tokens
   JWT_SECRET: requiredString('JWT_SECRET is required').min(32),
-  JWT_EXPIRES_IN: z.string().default('7d'),
+  // Short-lived access token (JWT); the long-lived refresh token renews it
+  ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
+  // Sliding: a session ends after this many days without a refresh
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
 
   // Pricing. Amounts in cents; product prices include VAT (EU gross prices)
@@ -66,7 +69,8 @@ export const parseEnv = (rawEnv) => {
     },
     jwt: {
       secret: env.JWT_SECRET,
-      expiresIn: env.JWT_EXPIRES_IN,
+      accessTokenTtlMinutes: env.ACCESS_TOKEN_TTL_MINUTES,
+      refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
     },
     bcrypt: {
       saltRounds: env.BCRYPT_SALT_ROUNDS,

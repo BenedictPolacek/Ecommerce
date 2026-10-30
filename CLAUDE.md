@@ -47,6 +47,6 @@ Feature modules in `src/modules/<feature>/`, each with the same layers:
 Conventions:
 - Errors go through `src/middleware/errorHandler.js` → `{ success: false, message, errors? }`. Postgres error codes are mapped there.
 - IDs are UUIDs; DB columns are snake_case.
-- Auth: JWT in httpOnly cookie `token` or `Authorization: Bearer`. `authorize()` reads the live role from the DB.
+- Auth: short-lived access JWT (cookie `token` or `Authorization: Bearer`, carries session id `sid`; `authenticate` checks the session is active) + rotating single-use refresh token (cookie `refresh_token` on `/api/auth` or body; only its SHA-256 hash is stored, reuse revokes the session). `authorize()` reads the live role from the DB.
 - Multi-step writes (register, checkout) use a transaction: `pool.connect()` → `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Products are soft-deleted (`is_active = false`).

@@ -22,4 +22,12 @@ export const loginSchema = z.object({
   password: requiredString('Password is required').min(1, 'Password is required'),
 });
 
-export default { registerSchema, loginSchema };
+// Browsers send the refresh token as a cookie (empty body); other clients in the body.
+// prefault: no body at all is parsed as {}
+export const refreshTokenBodySchema = z
+  .object({
+    refreshToken: z.string().min(1).max(200).optional(),
+  })
+  .prefault({});
+
+export default { registerSchema, loginSchema, refreshTokenBodySchema };
