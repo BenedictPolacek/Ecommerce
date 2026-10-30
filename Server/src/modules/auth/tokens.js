@@ -17,10 +17,10 @@ export const signAccessToken = (user, sessionId) =>
   });
 
 /**
- * Opaque refresh token: 256 random bits, URL-safe. Not a JWT, because it is
- * looked up in the database anyway (that is what makes it revocable).
+ * Opaque token (refresh tokens, email links): 256 random bits, URL-safe. Not a JWT,
+ * because it is looked up in the database anyway (that is what makes it revocable).
  */
-export const generateRefreshToken = () => randomBytes(32).toString('base64url');
+export const generateToken = () => randomBytes(32).toString('base64url');
 
 /**
  * Only this hash is stored. SHA-256 is enough (unlike passwords, which need bcrypt):

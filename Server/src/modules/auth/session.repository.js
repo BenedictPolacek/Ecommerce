@@ -110,11 +110,16 @@ export const sessionRepository = {
     return rowCount > 0;
   },
 
-  revokeAllForUser: async (userId, reason) => {
-    const { rowCount } = await pool.query(
+  /**
+   * @param {{ exceptSessionId?: string, client?: import('pg').PoolClient }} [options]
+   *   exceptSessionId keeps that session (e.g. the device that changed the password)
+   */
+  revokeAllForUser: async (userId, reason, { exceptSessionId, client } = {}) => {
+    const db = client || pool;
+    const { rowCount } = await db.query(
       `UPDATE sessions SET revoked_at = CURRENT_TIMESTAMP, revoked_reason = $2
-       WHERE user_id = $1 AND ${ACTIVE}`,
-      [userId, reason]
+       WHERE user_id = $1 AND ($3::uuid IS NULL OR id <> $3) AND ${ACTIVE}`,
+      [userId, reason, exceptSessionId ?? null]
     );
     return rowCount;
   },

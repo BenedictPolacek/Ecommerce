@@ -48,5 +48,6 @@ Conventions:
 - Errors go through `src/middleware/errorHandler.js` → `{ success: false, message, errors? }`. Postgres error codes are mapped there.
 - IDs are UUIDs; DB columns are snake_case.
 - Auth: short-lived access JWT (cookie `token` or `Authorization: Bearer`, carries session id `sid`; `authenticate` checks the session is active) + rotating single-use refresh token (cookie `refresh_token` on `/api/auth` or body; only its SHA-256 hash is stored, reuse revokes the session). `authorize()` reads the live role from the DB.
+- Email links (verification 24 h, password reset 1 h): single-use tokens in `user_tokens` (hash only), sent via `src/mail/` (Nodemailer; locally Mailpit from docker-compose, http://localhost:8025; under Jest collected in `outbox`). Links point to the frontend (`APP_URL`), which posts the token to the API. Checkout requires `email_verified_at` (`requireVerifiedEmail`). `createUser()` in tests verifies by default.
 - Multi-step writes (register, checkout) use a transaction: `pool.connect()` → `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Products are soft-deleted (`is_active = false`).

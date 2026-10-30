@@ -1,18 +1,18 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../../src/config/env.js';
-import { generateRefreshToken, hashToken, signAccessToken } from '../../src/modules/auth/tokens.js';
+import { generateToken, hashToken, signAccessToken } from '../../src/modules/auth/tokens.js';
 
 describe('auth tokens', () => {
-  it('generates unique, URL-safe refresh tokens with 256 bits', () => {
-    const a = generateRefreshToken();
-    const b = generateRefreshToken();
+  it('generates unique, URL-safe tokens with 256 bits', () => {
+    const a = generateToken();
+    const b = generateToken();
 
     expect(a).not.toBe(b);
     expect(a).toMatch(/^[A-Za-z0-9_-]{43}$/); // 32 bytes in base64url
   });
 
   it('hashes deterministically to 64 hex characters without containing the token', () => {
-    const token = generateRefreshToken();
+    const token = generateToken();
 
     expect(hashToken(token)).toBe(hashToken(token));
     expect(hashToken(token)).toMatch(/^[0-9a-f]{64}$/);

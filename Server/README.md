@@ -5,6 +5,7 @@ Feature-based REST API structure for the ecommerce database.
 ## Structure
 
 - `src/config` - Environment and database configuration
+- `src/mail` - Sending emails (Nodemailer) and email templates
 - `src/db` - Migrations and seed data
 - `src/modules` - Feature modules such as products, cart, and orders
 - `src/middleware` - Shared Express middleware

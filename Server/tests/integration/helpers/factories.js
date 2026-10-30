@@ -8,9 +8,10 @@ export const api = () => request(app);
 export const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 /**
- * Registers a customer through the API and returns { user, token, password }.
+ * Registers a customer through the API and returns { user, token, refreshToken, password }.
+ * The email is marked as verified (most tests check out), unless { verified: false }.
  */
-export async function createUser(overrides = {}) {
+export async function createUser(overrides = {}, { verified = true } = {}) {
   const payload = {
     email: `user-${randomUUID()}@example.com`,
     password: 'password123',
@@ -22,6 +23,12 @@ export async function createUser(overrides = {}) {
   const res = await api().post('/api/auth/register').send(payload);
   if (res.status !== 201) {
     throw new Error(`createUser failed (${res.status}): ${res.body.message}`);
+  }
+
+  if (verified) {
+    await query('UPDATE users SET email_verified_at = CURRENT_TIMESTAMP WHERE id = $1', [
+      res.body.data.user.id,
+    ]);
   }
 
   return { ...res.body.data, password: payload.password };

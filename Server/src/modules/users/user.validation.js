@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { requiredString } from '../../utils/zod.js';
+import { passwordSchema } from '../auth/auth.validation.js';
 
 export const updateProfileSchema = z
   .object({
@@ -9,4 +11,17 @@ export const updateProfileSchema = z
     error: 'Please provide at least first_name or last_name to update',
   });
 
-export default { updateProfileSchema };
+export const changePasswordSchema = z
+  .object({
+    currentPassword: requiredString('Current password is required').min(
+      1,
+      'Current password is required'
+    ),
+    newPassword: passwordSchema,
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    error: 'New password must be different from the current password',
+    path: ['newPassword'],
+  });
+
+export default { updateProfileSchema, changePasswordSchema };

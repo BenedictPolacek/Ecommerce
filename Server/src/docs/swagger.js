@@ -19,6 +19,32 @@ const ORDER_LIST_PARAMETERS = [
   },
 ];
 
+// { success, message } responses without data
+const messageResponse = (description, message) => ({
+  description,
+  content: {
+    'application/json': {
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: message },
+        },
+      },
+    },
+  },
+});
+
+const errorResponse = (description, message) => ({
+  description,
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/ErrorResponse' },
+      example: { success: false, message },
+    },
+  },
+});
+
 export const swaggerSpec = {
   openapi: '3.0.3',
   info: {
@@ -143,6 +169,12 @@ export const swaggerSpec = {
           first_name: { type: 'string', example: 'John' },
           last_name: { type: 'string', example: 'Doe' },
           role: { type: 'string', enum: ['customer', 'admin'], example: 'customer' },
+          email_verified_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'null until the email address is confirmed; required for checkout',
+          },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
         },
@@ -1017,6 +1049,146 @@ export const swaggerSpec = {
           400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
           404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/auth/verify-email': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Confirm the email address',
+        description:
+          'Registration sends an email with a link to `${APP_URL}/verify-email?token=...`. The frontend posts that token here. Single use, valid for 24 hours. No login required (the link may be opened on another device).',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token'],
+                properties: { token: { type: 'string', example: 'Zk3q...' } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: messageResponse('Email address verified', 'Email address verified'),
+          400: errorResponse(
+            'Validation failed, or the token is unknown, used or expired',
+            'Invalid or expired verification link. Please request a new one.'
+          ),
+        },
+      },
+    },
+    '/auth/verify-email/resend': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Send a new verification email',
+        description:
+          'Older links stop working. At most one email per minute. Locally the mails show up in Mailpit (http://localhost:8025).',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        responses: {
+          200: messageResponse('Email sent', 'Verification email sent'),
+          400: errorResponse('Already verified', 'Email address is already verified'),
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          429: errorResponse(
+            'An email was sent less than a minute ago',
+            'Please wait a minute before requesting another email.'
+          ),
+        },
+      },
+    },
+    '/auth/forgot-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Request a password reset link',
+        description:
+          'Always answers 200 with the same message, whether or not the account exists, so nobody can find out which emails are registered. If it exists, a link to `${APP_URL}/reset-password?token=...` is sent (valid for 1 hour, at most one email per minute).',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: { email: { type: 'string', format: 'email' } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: messageResponse(
+            'Same answer for every email address',
+            'If an account with this email exists, we have sent a password reset link.'
+          ),
+          400: { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/auth/reset-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Set a new password with the token from the reset link',
+        description:
+          'Single use. Ends all sessions of the user (every device must log in again), clears the auth cookies, marks the email as verified and sends a "password changed" notice.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token', 'password'],
+                properties: {
+                  token: { type: 'string', example: 'Zk3q...' },
+                  password: { type: 'string', minLength: 6, example: 'new-password123' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: messageResponse(
+            'Password changed, all sessions ended',
+            'Password has been reset. Please log in with your new password.'
+          ),
+          400: errorResponse(
+            'Validation failed, or the token is unknown, used or expired',
+            'Invalid or expired password reset link. Please request a new one.'
+          ),
+        },
+      },
+    },
+    '/users/me/password': {
+      patch: {
+        tags: ['Users'],
+        summary: 'Change my password',
+        description:
+          'Requires the current password. Other sessions are ended, the current one stays logged in. Sends a "password changed" notice.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['currentPassword', 'newPassword'],
+                properties: {
+                  currentPassword: { type: 'string', example: 'password123' },
+                  newPassword: { type: 'string', minLength: 6, example: 'new-password123' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: messageResponse(
+            'Password changed',
+            'Password changed. Your other devices have been logged out.'
+          ),
+          400: errorResponse(
+            'Validation failed, or the current password is wrong',
+            'Current password is incorrect'
+          ),
+          401: { $ref: '#/components/responses/UnauthorizedError' },
         },
       },
     },
@@ -2030,7 +2202,7 @@ export const swaggerSpec = {
         tags: ['Orders'],
         summary: 'Checkout cart and create new order',
         description:
-          'Runs atomic transaction: validates cart items, reserves stock, creates order & items, and empties cart.',
+          'Runs atomic transaction: validates cart items, reserves stock, creates order & items, and empties cart. Requires a verified email address.',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
         requestBody: {
           required: true,
@@ -2058,6 +2230,10 @@ export const swaggerSpec = {
           },
           400: { $ref: '#/components/responses/ValidationError' },
           401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: errorResponse(
+            'Email address not verified yet',
+            'Please verify your email address first. A new link can be requested via POST /api/auth/verify-email/resend.'
+          ),
           404: { $ref: '#/components/responses/NotFoundError' },
         },
       },
