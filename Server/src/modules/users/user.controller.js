@@ -33,7 +33,10 @@ export const userController = {
    * PATCH /api/users/me/password
    */
   changePassword: catchAsync(async (req, res) => {
-    await authService.changePassword(req.user, req.body);
+    await authService.changePassword(
+      { userId: req.user.id, sessionId: req.user.sessionId },
+      req.body
+    );
     res.status(200).json({
       success: true,
       message: 'Password changed. Your other devices have been logged out.',
