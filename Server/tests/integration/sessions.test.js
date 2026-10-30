@@ -77,7 +77,9 @@ describe('Sessions and refresh tokens', () => {
       // Neither the newest refresh token nor the access token work anymore
       expect((await refresh(second.refreshToken)).status).toBe(401);
       expect((await me(second.token)).status).toBe(401);
-      const { rows } = await query('SELECT revoked_reason FROM sessions');
+      // createUser() started its own session too, so look up this one by id
+      const { sid } = jwt.decode(first.token);
+      const { rows } = await query('SELECT revoked_reason FROM sessions WHERE id = $1', [sid]);
       expect(rows[0].revoked_reason).toBe('reuse_detected');
     });
 
