@@ -15,6 +15,9 @@ export const ORDER_TRANSITIONS = {
   refunded: [],
 };
 
+// Still in progress: the customer may need to be contacted (delivery, refund)
+export const OPEN_ORDER_STATUSES = ['pending', 'paid', 'processing', 'shipped'];
+
 export const canTransition = (from, to) => ORDER_TRANSITIONS[from]?.includes(to) ?? false;
 
 /**

@@ -1,5 +1,8 @@
 import { registerSchema, resetPasswordSchema } from '../../src/modules/auth/auth.validation.js';
-import { changePasswordSchema } from '../../src/modules/users/user.validation.js';
+import {
+  changePasswordSchema,
+  deleteAccountSchema,
+} from '../../src/modules/users/user.validation.js';
 import { createAddressSchema } from '../../src/modules/addresses/address.validation.js';
 import { createCategorySchema } from '../../src/modules/categories/category.validation.js';
 import {
@@ -115,5 +118,11 @@ describe('password schemas', () => {
     expect(
       changePasswordSchema.safeParse({ currentPassword: 'secret1', newPassword: 'secret2' }).success
     ).toBe(true);
+  });
+});
+
+describe('deleteAccountSchema', () => {
+  it('reports a missing password even without any body (Express 5: req.body undefined)', () => {
+    expect(messagesFor(deleteAccountSchema, undefined)).toEqual(['Password is required']);
   });
 });

@@ -24,4 +24,11 @@ export const changePasswordSchema = z
     path: ['newPassword'],
   });
 
-export default { updateProfileSchema, changePasswordSchema };
+// Express 5: a DELETE without body has req.body undefined; prefault turns that into {}
+export const deleteAccountSchema = z
+  .object({
+    password: requiredString('Password is required').min(1, 'Password is required'),
+  })
+  .prefault({});
+
+export default { updateProfileSchema, changePasswordSchema, deleteAccountSchema };

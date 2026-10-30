@@ -1246,6 +1246,69 @@ export const swaggerSpec = {
           401: { $ref: '#/components/responses/UnauthorizedError' },
         },
       },
+      delete: {
+        tags: ['Users'],
+        summary: 'Delete my account (GDPR)',
+        description:
+          'Requires the current password. Without orders the account is deleted. With orders it is anonymized (email, name and password removed, `deleted_at` set), because invoices must be kept for 10 years (§ 147 AO); the orders, including their address snapshots, stay. Addresses, cart, sessions and email tokens are deleted either way. All sessions end, the auth cookies are cleared and a confirmation email is sent. Blocked while orders are still open (pending, paid, processing, shipped). The last admin cannot delete their account.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['password'],
+                properties: { password: { type: 'string', example: 'password123' } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: messageResponse('Account deleted', 'Your account has been deleted.'),
+          400: errorResponse(
+            'Validation failed, or the password is wrong',
+            'Password is incorrect'
+          ),
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          409: errorResponse(
+            'Open orders, or the last admin',
+            'There are still open orders. The account can be deleted once they are completed.'
+          ),
+        },
+      },
+    },
+    '/users/{id}': {
+      delete: {
+        tags: ['Users'],
+        summary: 'Delete a customer account (admin only)',
+        description:
+          'For deletion requests that reach support (email, phone). Same rules as DELETE /users/me, without the password. Admin accounts are refused (403).',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'User UUID',
+          },
+        ],
+        responses: {
+          200: messageResponse('User deleted or anonymized', 'User has been deleted.'),
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: errorResponse(
+            'Not an admin, or the target is an admin',
+            'Admin accounts cannot be deleted here. Demote the admin first.'
+          ),
+          404: { $ref: '#/components/responses/NotFoundError' },
+          409: errorResponse(
+            'The customer still has open orders',
+            'There are still open orders. The account can be deleted once they are completed.'
+          ),
+        },
+      },
     },
     '/categories': {
       get: {
