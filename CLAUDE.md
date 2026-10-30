@@ -10,7 +10,7 @@ it is up to you to show me best practices and ways to create this project as rea
 - Ask before big decisions (new libraries, architecture changes, choice of tools).
 
 ## Layout
-- `Server/` – REST API (Node.js, Express 4, PostgreSQL via `pg`, ES modules)
+- `Server/` – REST API (Node.js, Express 5, PostgreSQL via `pg`, ES modules)
 - (later) `Client/` – frontend
 
 ## Git workflow
