@@ -1,5 +1,6 @@
 import request from 'supertest';
 import app from '../../src/app.js';
+import { config } from '../../src/config/env.js';
 
 describe('Base API & Error Handling', () => {
   it('GET / should return 200 with service info', async () => {
@@ -43,6 +44,28 @@ describe('Base API & Error Handling', () => {
     expect(res.body.paths).toHaveProperty('/products');
     expect(res.body.paths).toHaveProperty('/cart');
     expect(res.body.paths).toHaveProperty('/orders');
+  });
+});
+
+describe('CORS', () => {
+  it('allows credentialed requests from the configured frontend origin', async () => {
+    const origin = config.corsOrigins[0];
+    const res = await request(app).get('/api/health').set('Origin', origin);
+    expect(res.headers['access-control-allow-origin']).toBe(origin);
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('sends no CORS headers to other origins, so the browser blocks them', async () => {
+    const res = await request(app).get('/api/health').set('Origin', 'https://evil.example.com');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('rejects a preflight from another origin', async () => {
+    const res = await request(app)
+      .options('/api/auth/login')
+      .set('Origin', 'https://evil.example.com')
+      .set('Access-Control-Request-Method', 'POST');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
 
