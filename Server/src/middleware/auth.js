@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 import { userRepository } from '../modules/users/user.repository.js';
+import { sessionRepository } from '../modules/auth/session.repository.js';
 
 const getToken = (req) => {
   // 1. Check for token in httpOnly cookie
@@ -16,11 +17,24 @@ const getToken = (req) => {
 };
 
 /**
- * Middleware to authenticate requests via JWT Bearer token.
- * Populates `req.user` with `{ id, email }` from the token.
+ * Valid signature, not expired, and its session still active. Throws otherwise.
+ * The session check makes logout take effect immediately instead of when the token runs out.
+ * Tokens from before sessions existed (no sid) are rejected.
+ */
+const verifyAccessToken = async (token) => {
+  const decoded = jwt.verify(token, config.jwt.secret);
+  if (!decoded.sid || !(await sessionRepository.isActive(decoded.sid, decoded.id))) {
+    throw new AppError('Your session has ended. Please log in again.', 401);
+  }
+  return decoded;
+};
+
+/**
+ * Middleware to authenticate requests via JWT (cookie or Bearer header).
+ * Populates `req.user` with `{ id, email, sessionId }` from the token.
  * Role is NOT set here — it is fetched live from the DB inside `authorize()`.
  */
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   const token = getToken(req);
 
   if (!token) {
@@ -28,17 +42,27 @@ export const authenticate = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, config.jwt.secret);
+    const decoded = await verifyAccessToken(token);
     req.user = {
       id: decoded.id,
       email: decoded.email,
+      sessionId: decoded.sid,
     };
     next();
   } catch (error) {
+    if (error instanceof AppError) return next(error);
     if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Authentication token has expired. Please log in again.', 401));
+      return next(
+        new AppError(
+          'Authentication token has expired. Refresh it via POST /api/auth/refresh.',
+          401
+        )
+      );
     }
-    return next(new AppError('Invalid authentication token', 401));
+    if (error.name === 'JsonWebTokenError') {
+      return next(new AppError('Invalid authentication token', 401));
+    }
+    return next(error);
   }
 };
 
@@ -52,14 +76,16 @@ export const optionalAuthenticate = async (req, res, next) => {
   const token = getToken(req);
   if (!token) return next();
 
-  let decoded;
   try {
-    decoded = jwt.verify(token, config.jwt.secret);
-  } catch {
-    return next();
-  }
+    let decoded;
+    try {
+      decoded = await verifyAccessToken(token);
+    } catch (error) {
+      // Invalid, expired or ended session: browse anonymously. DB errors still surface.
+      if (error instanceof AppError || error instanceof jwt.JsonWebTokenError) return next();
+      throw error;
+    }
 
-  try {
     const user = await userRepository.findById(decoded.id);
     if (user) {
       req.user = { id: user.id, email: user.email, role: user.role };

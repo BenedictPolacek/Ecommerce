@@ -173,10 +173,56 @@ export const swaggerSpec = {
           data: {
             type: 'object',
             properties: {
-              token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsIn...' },
+              token: {
+                type: 'string',
+                example: 'eyJhbGciOiJIUzI1NiIsIn...',
+                description: 'Access token (JWT), valid for 15 minutes by default',
+              },
+              refreshToken: {
+                type: 'string',
+                example: 'q3V9cL0x...',
+                description:
+                  'Single-use refresh token for POST /auth/refresh (also set as httpOnly cookie `refresh_token`)',
+              },
               user: { $ref: '#/components/schemas/User' },
             },
           },
+        },
+      },
+      RefreshTokenRequest: {
+        type: 'object',
+        description: 'Browsers can omit the body: the `refresh_token` cookie is used instead',
+        properties: {
+          refreshToken: { type: 'string', example: 'q3V9cL0x...' },
+        },
+      },
+      TokenPairResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'Token refreshed' },
+          data: {
+            type: 'object',
+            properties: {
+              token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsIn...' },
+              refreshToken: { type: 'string', example: 'r8Kp2mZt...' },
+            },
+          },
+        },
+      },
+      Session: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          user_agent: { type: 'string', nullable: true, example: 'Mozilla/5.0 (Windows NT 10.0)' },
+          created_at: { type: 'string', format: 'date-time' },
+          last_used_at: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last token refresh',
+          },
+          expires_at: { type: 'string', format: 'date-time' },
+          current: { type: 'boolean', description: 'The session this request comes from' },
         },
       },
       UpdateProfileRequest: {
@@ -788,7 +834,8 @@ export const swaggerSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Log in to an existing account',
-        description: 'Returns JWT token in response and sets an httpOnly cookie named `token`.',
+        description:
+          'Starts a new session. Returns an access token (JWT) and a refresh token, and sets them as httpOnly cookies `token` and `refresh_token` (the latter only sent to /api/auth).',
         requestBody: {
           required: true,
           content: {
@@ -823,7 +870,15 @@ export const swaggerSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Log out current session',
-        description: 'Clears the authentication httpOnly cookie.',
+        description:
+          'Revokes the current session (found via refresh token, or via the access token even if expired) and clears both cookies. Always 200.',
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RefreshTokenRequest' },
+            },
+          },
+        },
         responses: {
           200: {
             description: 'Logged out successfully',
@@ -839,6 +894,129 @@ export const swaggerSpec = {
               },
             },
           },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Get a new token pair with the refresh token (rotation)',
+        description:
+          'Each refresh token works once and is replaced by a new one. Using an already used refresh token again is treated as theft: the whole session is revoked (401).',
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RefreshTokenRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'New access and refresh token (also set as cookies)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TokenPairResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Refresh token missing, unknown, expired, revoked or reused',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+            },
+          },
+        },
+      },
+    },
+    '/auth/logout-all': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Log out of all sessions (every device)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        responses: {
+          200: {
+            description: 'All sessions revoked',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Logged out of 3 session(s)' },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+    },
+    '/auth/sessions': {
+      get: {
+        tags: ['Auth'],
+        summary: 'List my active sessions (devices)',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        responses: {
+          200: {
+            description: 'Active sessions, most recently used first',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        sessions: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/Session' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+    },
+    '/auth/sessions/{id}': {
+      delete: {
+        tags: ['Auth'],
+        summary: 'End one of my sessions (e.g. a lost phone)',
+        description: "Someone else's session returns 404.",
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Session UUID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Session ended',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Session ended' },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
         },
       },
     },

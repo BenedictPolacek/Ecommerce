@@ -10,6 +10,14 @@ describe('parseEnv', () => {
     expect(config.isProduction).toBe(false);
     expect(config.db.port).toBe(5432);
     expect(config.bcrypt.saltRounds).toBe(10);
+    expect(config.jwt.accessTokenTtlMinutes).toBe(15);
+    expect(config.jwt.refreshTokenTtlDays).toBe(30);
+  });
+
+  it('rejects an access token lifetime above one hour', () => {
+    expect(() => parseEnv({ JWT_SECRET: validSecret, ACCESS_TOKEN_TTL_MINUTES: '120' })).toThrow(
+      /ACCESS_TOKEN_TTL_MINUTES/
+    );
   });
 
   it('coerces numeric strings to numbers', () => {
