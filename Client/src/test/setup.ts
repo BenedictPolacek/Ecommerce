@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
-// Unmount rendered components after each test so tests stay independent
+// Unmount rendered components and restore stubbed globals (fetch) after each test
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
