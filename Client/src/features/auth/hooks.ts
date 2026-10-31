@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCurrentUser, logout } from './api';
+import { getCurrentUser, login, logout, register } from './api';
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
@@ -13,6 +13,23 @@ export function useCurrentUser() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/**
+ * After login/register the session cookies are set: reload the current user and wait for it,
+ * so protected pages see the user right away when we navigate there.
+ */
+function useStartSession<TInput, TData>(mutationFn: (input: TInput) => Promise<TData>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me, refetchType: 'all' }),
+  });
+}
+
+export const useLogin = () => useStartSession(login);
+
+export const useRegister = () => useStartSession(register);
 
 export function useLogout() {
   const queryClient = useQueryClient();

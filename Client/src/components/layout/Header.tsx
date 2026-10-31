@@ -1,4 +1,5 @@
-import { Link, NavLink } from 'react-router';
+import { Link, NavLink, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks';
 
@@ -8,6 +9,15 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
+  const navigate = useNavigate();
+
+  const handleLogout = () =>
+    logout.mutate(undefined, {
+      onSettled: () => {
+        navigate('/');
+        toast.success('You have been logged out.');
+      },
+    });
 
   return (
     <header className="border-b">
@@ -30,16 +40,21 @@ export function Header() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => logout.mutate()}
+                onClick={handleLogout}
                 disabled={logout.isPending}
               >
                 Log out
               </Button>
             </>
           ) : (
-            <Button asChild size="sm">
-              <Link to="/login">Log in</Link>
-            </Button>
+            <>
+              <NavLink to="/login" className={navLinkClass}>
+                Log in
+              </NavLink>
+              <Button asChild size="sm">
+                <Link to="/register">Sign up</Link>
+              </Button>
+            </>
           )}
         </nav>
       </div>

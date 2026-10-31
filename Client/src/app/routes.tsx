@@ -1,11 +1,13 @@
 import type { RouteObject } from 'react-router';
 import { RootLayout } from '@/components/layout/RootLayout';
+import { GuestOnly } from '@/features/auth/components/GuestOnly';
 import { RequireAuth } from '@/features/auth/components/RequireAuth';
 import { AccountPage } from '@/pages/AccountPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RegisterPage } from '@/pages/RegisterPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 
 // Kept separate from the browser router so tests can mount the same routes in a memory router
@@ -15,7 +17,13 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'login', element: <LoginPage /> },
+      {
+        element: <GuestOnly />,
+        children: [
+          { path: 'login', element: <LoginPage /> },
+          { path: 'register', element: <RegisterPage /> },
+        ],
+      },
       {
         element: <RequireAuth />,
         children: [{ path: 'account', element: <AccountPage /> }],
