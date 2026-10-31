@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks';
+import { CartLink } from '@/features/cart/components/CartLink';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground';
@@ -27,6 +28,7 @@ export function Header() {
         </Link>
 
         <nav aria-label="Main" className="flex items-center gap-4 text-sm">
+          <CartLink />
           {user ? (
             <>
               {user.role === 'admin' && (

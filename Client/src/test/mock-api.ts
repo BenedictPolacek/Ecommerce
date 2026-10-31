@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import type { Cart } from '@/features/cart/types';
 
 export interface MockResponse {
   status?: number;
@@ -12,12 +13,12 @@ type Handler = MockResponse | (() => MockResponse | Promise<MockResponse>);
  * without the /api prefix, e.g. { 'GET /users/me': { body: { success: true, data } } }.
  * A key without query string also matches requests with one ("GET /products" matches
  * "/products?page=2"); an exact key with query string wins.
- * The shop page (home) is loaded by many flows, so an empty shop is mocked by default;
- * pass the same keys to override it.
+ * The shop page (home) and the cart badge are loaded by many flows, so an empty shop and an
+ * empty cart are mocked by default; pass the same keys to override them.
  * Unknown requests fail loudly so tests never hit a real server.
  */
 export function mockApi(handlers: Record<string, Handler>) {
-  const allHandlers: Record<string, Handler> = { ...emptyShop, ...handlers };
+  const allHandlers: Record<string, Handler> = { ...defaults, ...handlers };
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
@@ -49,7 +50,20 @@ export const fail = (status: number, message = 'Error'): MockResponse => ({
   body: { success: false, message },
 });
 
-const emptyShop: Record<string, Handler> = {
+export const emptyCart: Cart = {
+  id: 'cart-1',
+  userId: 'user-1',
+  items: [],
+  totalItems: 0,
+  subtotalCents: 0,
+  shippingFeeCents: 0,
+  taxCents: 0,
+  totalCents: 0,
+  createdAt: '2026-10-01T10:00:00.000Z',
+};
+
+const defaults: Record<string, Handler> = {
+  'GET /cart': ok({ cart: emptyCart }),
   'GET /categories': ok({ categories: [] }),
   'GET /products': ok({
     products: [],
