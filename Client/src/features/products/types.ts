@@ -20,6 +20,16 @@ export interface ProductSummary {
   updated_at: string;
 }
 
+export interface ProductImage extends ProductImageSummary {
+  id: string;
+  sort_order: number;
+}
+
+/** Product with all images (GET /products/:idOrSlug) */
+export interface Product extends Omit<ProductSummary, 'primary_image'> {
+  images: ProductImage[];
+}
+
 export interface Pagination {
   page: number;
   limit: number;

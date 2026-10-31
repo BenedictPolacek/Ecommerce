@@ -6,12 +6,22 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   return categories;
 }
 
-/** Depth-first search through the tree, e.g. to turn a URL slug into the category */
-export function findCategoryBySlug(nodes: CategoryNode[], slug: string): CategoryNode | null {
+/** Depth-first search for the node matching the predicate */
+function findCategory(
+  nodes: CategoryNode[],
+  matches: (node: CategoryNode) => boolean
+): CategoryNode | null {
   for (const node of nodes) {
-    if (node.slug === slug) return node;
-    const found = findCategoryBySlug(node.children, slug);
+    if (matches(node)) return node;
+    const found = findCategory(node.children, matches);
     if (found) return found;
   }
   return null;
 }
+
+/** Turns a URL slug into the category */
+export const findCategoryBySlug = (nodes: CategoryNode[], slug: string) =>
+  findCategory(nodes, (node) => node.slug === slug);
+
+export const findCategoryById = (nodes: CategoryNode[], id: string) =>
+  findCategory(nodes, (node) => node.id === id);
