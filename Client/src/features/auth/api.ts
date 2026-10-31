@@ -23,3 +23,12 @@ export const login = (input: LoginInput) => api.post<AuthResponse>('/auth/login'
 export const register = (input: RegisterInput) => api.post<AuthResponse>('/auth/register', input);
 
 export const logout = () => api.post<void>('/auth/logout');
+
+export const verifyEmail = (token: string) => api.post<void>('/auth/verify-email', { token });
+
+export const resendVerification = () => api.post<void>('/auth/verify-email/resend');
+
+export const forgotPassword = (email: string) => api.post<void>('/auth/forgot-password', { email });
+
+export const resetPassword = (input: { token: string; password: string }) =>
+  api.post<void>('/auth/reset-password', input);

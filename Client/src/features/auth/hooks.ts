@@ -1,5 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCurrentUser, login, logout, register } from './api';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  forgotPassword,
+  getCurrentUser,
+  login,
+  logout,
+  register,
+  resendVerification,
+  resetPassword,
+  verifyEmail,
+} from './api';
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
@@ -31,15 +40,46 @@ export const useLogin = () => useStartSession(login);
 
 export const useRegister = () => useStartSession(register);
 
+/**
+ * The session ended: mark the user as logged out and drop every other cached query
+ * (cart, orders, ...) of the previous user. The auth query is kept and set to null instead
+ * of being removed, so components already showing the user (e.g. the header) update at once.
+ */
+function endSession(queryClient: QueryClient) {
+  queryClient.setQueryData(authKeys.me, null);
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== authKeys.me[0] });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: logout,
-    onSettled: () => {
-      // Drop all cached data of the previous user (cart, orders, ...), even if the request failed
-      queryClient.clear();
-      queryClient.setQueryData(authKeys.me, null);
-    },
+    // Even if the request failed, the user wanted to leave: forget everything locally
+    onSettled: () => endSession(queryClient),
+  });
+}
+
+export function useVerifyEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: verifyEmail,
+    // If this browser is logged in, email_verified_at changed: hides the banner
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me }),
+  });
+}
+
+export const useResendVerification = () => useMutation({ mutationFn: resendVerification });
+
+export const useForgotPassword = () => useMutation({ mutationFn: forgotPassword });
+
+export function useResetPassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: resetPassword,
+    // The server ended all sessions of this user, including one in this browser
+    onSuccess: () => endSession(queryClient),
   });
 }
