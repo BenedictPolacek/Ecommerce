@@ -19,6 +19,31 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
+  # Client npm dependencies
+  - package-ecosystem: npm
+    directory: /Client
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      # Pinned to 6.0 until typescript-eslint supports TypeScript 7
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+    groups:
+      eslint:
+        patterns: [eslint, "@eslint/*", typescript-eslint]
+      # react, react-dom and their types must stay in sync
+      react:
+        patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+      vitest:
+        patterns: [vitest, "@vitest/*"]
+      minor-and-patch:
+        update-types: [minor, patch]
+
   # GitHub Actions used in workflows
   - package-ecosystem: github-actions
     directory: /
