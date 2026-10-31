@@ -7,6 +7,7 @@ import { AdminPage } from '@/pages/AdminPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { ProductPage } from '@/pages/ProductPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
@@ -20,6 +21,7 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <ShopPage /> },
+      { path: 'products/:slug', element: <ProductPage /> },
       {
         element: <GuestOnly />,
         children: [

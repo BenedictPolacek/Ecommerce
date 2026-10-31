@@ -54,6 +54,7 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - Forms: React Hook Form + `zodResolver` with client schemas in `features/<feature>/schemas.ts` that mirror the server rules (UX only). `TextField`/`FormAlert` in `components/form/`; `setServerErrors()` (`lib/form-errors.ts`) puts API field errors on inputs, the rest on `root.server`
 - Success messages: `toast` from `sonner` (`<Toaster />` in `App.tsx`); errors stay inline in the form
 - Shop (`/`, `ShopPage`): filters live in the URL (`?q=&category=<slug>&page=`), parsed/built only via `features/products/shop-params.ts`; the category slug is resolved to `category_id` from the category tree before products load. `formatPrice(cents)` in `lib/format.ts` for all prices. Lists use `placeholderData: keepPreviousData`
+- Product page `/products/:slug`; page titles via React 19 `<title>` inside the page component. Cart mutations write the returned cart into the `['cart']` query (`setQueryData`); visitors adding to the cart are sent to `/login?redirect=<product>`. `QuantityInput` in `components/form/` (clamped to stock)
 - Tests: `mockApi()` in `src/test/mock-api.ts` stubs fetch per `"METHOD /path"` (a key without `?query` also matches requests with one; an empty shop for `GET /categories` and `GET /products` is mocked by default); `renderRoute(path)` in `src/test/render.tsx` mounts the real routes in a memory router
 
 ## Architecture (Server/src)

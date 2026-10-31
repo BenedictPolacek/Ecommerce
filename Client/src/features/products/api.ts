@@ -1,5 +1,5 @@
 import { api } from '@/lib/api-client';
-import type { ProductList, ProductListParams } from './types';
+import type { Product, ProductList, ProductListParams } from './types';
 
 export function getProducts({ search, categoryId, page, limit }: ProductListParams) {
   // URLSearchParams encodes user input (spaces, &, ...) safely
@@ -9,3 +9,7 @@ export function getProducts({ search, categoryId, page, limit }: ProductListPara
 
   return api.get<ProductList>(`/products?${query}`);
 }
+
+/** The API accepts the id or the slug; the shop uses readable slugs in its URLs */
+export const getProduct = (slug: string) =>
+  api.get<Product>(`/products/${encodeURIComponent(slug)}`);
