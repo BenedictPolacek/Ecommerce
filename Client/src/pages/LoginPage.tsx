@@ -24,6 +24,14 @@ export function LoginPage() {
     >
       {/* GuestOnly redirects as soon as the user is known */}
       <LoginForm onSuccess={(user) => toast.success(`Welcome back, ${user.first_name}!`)} />
+      <p className="mt-4 text-center text-sm">
+        <Link
+          to="/forgot-password"
+          className="text-muted-foreground hover:text-foreground underline"
+        >
+          Forgot your password?
+        </Link>
+      </p>
     </AuthCard>
   );
 }
