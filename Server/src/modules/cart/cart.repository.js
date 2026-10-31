@@ -25,7 +25,8 @@ export const cartRepository = {
   },
 
   /**
-   * Get all items in a cart joined with product details
+   * Get all items in a cart joined with product details.
+   * Slug and first image let the client link to and show the product without extra requests.
    */
   async getCartItems(cartId, client = pool) {
     const query = `
@@ -37,13 +38,23 @@ export const cartRepository = {
         ci.updated_at,
         p.id AS product_id,
         p.name AS product_name,
+        p.slug AS product_slug,
         p.sku,
         p.price_cents,
         p.stock_quantity,
         p.is_active,
-        ci.quantity * p.price_cents AS line_total_cents
+        ci.quantity * p.price_cents AS line_total_cents,
+        img.primary_image
       FROM cart_items ci
       JOIN products p ON ci.product_id = p.id
+      -- Same shape as in the product list; null when the product has no image
+      LEFT JOIN LATERAL (
+        SELECT json_build_object('url', pi.url, 'alt_text', pi.alt_text) AS primary_image
+        FROM product_images pi
+        WHERE pi.product_id = p.id
+        ORDER BY pi.sort_order
+        LIMIT 1
+      ) img ON TRUE
       WHERE ci.cart_id = $1
       ORDER BY ci.created_at ASC
     `;
