@@ -6,7 +6,7 @@
 2. Branch off `main`: `feature/…`, `fix/…`, `docs/…`, `chore/…`
 3. Commit using [Conventional Commits](#commit-messages).
 4. Push and open a pull request. Fill in the template, link the issue with `Closes #<number>`.
-5. CI (`Server lint`, `Server tests`) must pass before merging.
+5. CI (`Server lint`, `Server tests`, `Client lint`, `Client tests`) must pass before merging.
 
 ## Commit messages
 

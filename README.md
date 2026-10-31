@@ -7,10 +7,10 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 ## Tech stack
 
 - **Backend:** Node.js, Express, PostgreSQL (`pg`), Zod, JWT auth
-- **Testing:** Jest, Supertest
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui
+- **Testing:** Jest, Supertest (server); Vitest, React Testing Library (client)
 - **CI:** GitHub Actions
 - **Local dev:** Docker Compose (PostgreSQL, Mailpit for emails)
-- **Frontend:** coming soon
 
 ## Features (API)
 
@@ -27,7 +27,7 @@ Full-stack ecommerce portfolio project, built step by step like a real company p
 | Folder | Description |
 | --- | --- |
 | [`Server/`](Server/) | REST API ([details](Server/README.md)) |
-| `Client/` | Frontend (planned) |
+| [`Client/`](Client/) | React single-page app (in progress) |
 
 ## Getting started
 
@@ -44,6 +44,16 @@ npm run dev            # starts the API on http://localhost:5000
 ```
 
 API docs: http://localhost:5000/api/docs
+
+Frontend (in a second terminal, the API must be running):
+
+```bash
+cd Client
+npm install
+npm run dev            # starts the shop on http://localhost:3000
+```
+
+The client calls the API through the same origin (`/api`): Vite proxies `/api` to `http://localhost:5000` (override with `VITE_API_PROXY_TARGET`). This keeps the `sameSite=strict` auth cookies working. Port 3000 matches `APP_URL` in `Server/.env`, so email links open the frontend.
 
 Emails (verification, password reset) are caught by Mailpit: http://localhost:8025. Nothing is sent to real inboxes.
 
@@ -90,4 +100,14 @@ npm run test:integration  # only tests against the database
 - `tests/unit/` – no database needed.
 - `tests/integration/` – real HTTP requests against a real PostgreSQL. They use a separate database `ecommerce_db_test` (set in [`Server/.env.test`](Server/.env.test)), which is created and migrated automatically. All tables are emptied before each test, so the setup refuses to run unless the database name ends with `_test`.
 
-Tests also run automatically on every push and pull request via GitHub Actions, with a PostgreSQL service container.
+Client:
+
+```bash
+cd Client
+npm test                  # Vitest + React Testing Library (jsdom, no browser needed)
+npm run test:watch        # re-run on file changes
+npm run lint              # ESLint
+npm run typecheck         # TypeScript
+```
+
+Tests also run automatically on every push and pull request via GitHub Actions (server tests with a PostgreSQL service container).

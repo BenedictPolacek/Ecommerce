@@ -11,14 +11,14 @@ it is up to you to show me best practices and ways to create this project as rea
 
 ## Layout
 - `Server/` – REST API (Node.js, Express 5, PostgreSQL via `pg`, ES modules)
-- (later) `Client/` – frontend
+- `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui; later React Router, TanStack Query, React Hook Form + Zod)
 
 ## Git workflow
-- `main` is protected: no direct pushes. Every change goes through a pull request and needs the `Server tests` CI check to pass.
+- `main` is protected: no direct pushes. Every change goes through a pull request and needs the CI checks to pass.
 - Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
 - Commit messages and PR titles: Conventional Commits (`feat(cart): …`, `fix(orders): …`), see `CONTRIBUTING.md`.
 - After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
-- CI: GitHub Actions in `.github/workflows/ci.yml` (Node version from `.nvmrc`): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first.
+- CI: GitHub Actions in `.github/workflows/ci.yml` (Node version from `.nvmrc`): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first. `Client lint` (ESLint, Prettier, `tsc`) and `Client tests` (Vitest + production build) in `Client/`.
 
 ## Server commands (run inside `Server/`)
 - `npm run dev` – start with nodemon (port from `.env`, default 5000)
@@ -32,6 +32,15 @@ it is up to you to show me best practices and ways to create this project as rea
 - API docs: `http://localhost:5000/api/docs` (Swagger)
 
 Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
+
+## Client commands (run inside `Client/`)
+- `npm run dev` – Vite on port 3000 (= `APP_URL`), proxies `/api` to `localhost:5000` (`VITE_API_PROXY_TARGET`)
+- `npm test` / `test:watch` / `test:coverage` – Vitest + React Testing Library (jsdom), setup in `src/test/setup.ts`
+- `npm run lint`, `npm run typecheck`, `npm run format(:check)`, `npm run build`
+- shadcn/ui components: `npx shadcn@latest add <component>` → `src/components/ui/` (our code, may be edited)
+- TypeScript pinned to 6.0 until typescript-eslint supports TS 7
+- Imports use the `@/` alias for `src/`
+- API is always called via the same origin `/api` (auth cookies are `sameSite=strict`), never a different host
 
 ## Architecture (Server/src)
 Feature modules in `src/modules/<feature>/`, each with the same layers:
