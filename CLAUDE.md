@@ -11,7 +11,7 @@ it is up to you to show me best practices and ways to create this project as rea
 
 ## Layout
 - `Server/` – REST API (Node.js, Express 5, PostgreSQL via `pg`, ES modules)
-- `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui; later React Router, TanStack Query, React Hook Form + Zod)
+- `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui, React Router 8 data mode, TanStack Query; later React Hook Form + Zod)
 
 ## Git workflow
 - `main` is protected: no direct pushes. Every change goes through a pull request and needs the CI checks to pass.
@@ -41,6 +41,15 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - TypeScript pinned to 6.0 until typescript-eslint supports TS 7
 - Imports use the `@/` alias for `src/`
 - API is always called via the same origin `/api` (auth cookies are `sameSite=strict`), never a different host
+
+## Architecture (Client/src)
+- `app/` – `App.tsx` (providers), `routes.tsx` (route objects, shared with tests), `query-client.ts`
+- `features/<feature>/` – `types.ts` (hand-written API types, snake_case like the API), `api.ts` (calls via `api`), `hooks.ts` (TanStack Query hooks + query keys), `components/`
+- `pages/` – one component per route; `components/layout/` – Header, Footer, RootLayout, PageStatus; `components/ui/` – shadcn
+- `lib/api-client.ts` – `api.get/post/patch/put/delete`: same-origin `/api`, unwraps `data`, throws `ApiError` (`status`, `message`, `errors`). On 401 it refreshes once and retries; parallel 401s share one refresh (refresh tokens are single use, reuse revokes the session)
+- Auth state = query `['auth','me']` (`useCurrentUser`, null = visitor). Any 401 that survives the refresh sets it to null. Logout clears the whole query cache
+- Protected routes: layout route `<RequireAuth />` / `<RequireAuth role="admin" />` → visitors go to `/login?redirect=…` (UX only, the API enforces access)
+- Tests: `mockApi()` in `src/test/mock-api.ts` stubs fetch per `"METHOD /path"`; `renderRoute(path)` in `src/test/render.tsx` mounts the real routes in a memory router
 
 ## Architecture (Server/src)
 Feature modules in `src/modules/<feature>/`, each with the same layers:
