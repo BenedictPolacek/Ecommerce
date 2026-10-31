@@ -33,6 +33,9 @@ updates:
       # Pinned to 6.0 until typescript-eslint supports TypeScript 7
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # Types must match the Node version in .nvmrc, bump together with Node
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
     groups:
       eslint:
         patterns: [eslint, "@eslint/*", typescript-eslint]
