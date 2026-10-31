@@ -557,12 +557,22 @@ export const swaggerSpec = {
           cart_id: { type: 'string', format: 'uuid' },
           product_id: { type: 'string', format: 'uuid' },
           product_name: { type: 'string', example: 'Wireless Mechanical Keyboard' },
+          product_slug: { type: 'string', example: 'wireless-mechanical-keyboard' },
           sku: { type: 'string', example: 'KB-WL-001' },
           price_cents: { type: 'integer', example: 9999 },
           quantity: { type: 'integer', example: 2 },
           line_total_cents: { type: 'integer', example: 19998 },
           stock_quantity: { type: 'integer', example: 45 },
           is_active: { type: 'boolean', example: true },
+          primary_image: {
+            type: 'object',
+            nullable: true,
+            description: 'First product image (lowest sort_order), null without images',
+            properties: {
+              url: { type: 'string', example: 'https://placehold.co/600x600' },
+              alt_text: { type: 'string', nullable: true, example: 'Keyboard from above' },
+            },
+          },
         },
       },
       Cart: {
