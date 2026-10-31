@@ -3,6 +3,7 @@ import { RootLayout } from '@/components/layout/RootLayout';
 import { GuestOnly } from '@/features/auth/components/GuestOnly';
 import { RequireAuth } from '@/features/auth/components/RequireAuth';
 import { AccountPage } from '@/pages/AccountPage';
+import { CartPage } from '@/pages/CartPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -35,7 +36,10 @@ export const routes: RouteObject[] = [
       { path: 'reset-password', element: <ResetPasswordPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: 'account', element: <AccountPage /> }],
+        children: [
+          { path: 'account', element: <AccountPage /> },
+          { path: 'cart', element: <CartPage /> },
+        ],
       },
       {
         element: <RequireAuth role="admin" />,

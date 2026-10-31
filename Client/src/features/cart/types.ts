@@ -1,8 +1,12 @@
+import type { ProductImageSummary } from '@/features/products/types';
+
 export interface CartItem {
   cart_item_id: string;
   cart_id: string;
   product_id: string;
   product_name: string;
+  product_slug: string;
+  primary_image: ProductImageSummary | null;
   sku: string;
   price_cents: number;
   stock_quantity: number;

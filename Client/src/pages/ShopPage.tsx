@@ -9,10 +9,9 @@ import { ProductGrid, ProductGridSkeleton } from '@/features/products/components
 import { ProductSearch } from '@/features/products/components/ProductSearch';
 import { useProducts } from '@/features/products/hooks';
 import { parseShopParams, shopSearch } from '@/features/products/shop-params';
+import { plural } from '@/lib/format';
 
 export const PAGE_SIZE = 12;
-
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 export function ShopPage() {
   const [searchParams] = useSearchParams();
