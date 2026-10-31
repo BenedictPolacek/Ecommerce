@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { createQueryClient } from '@/app/query-client';
 import { routes } from '@/app/routes';
+import { Toaster } from '@/components/ui/sonner';
 import type { User } from '@/features/auth/types';
 
 /** Renders the real app routes at the given URL, with a fresh query cache */
@@ -13,6 +14,7 @@ export function renderRoute(path: string) {
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <Toaster />
     </QueryClientProvider>
   );
 

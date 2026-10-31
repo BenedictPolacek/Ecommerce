@@ -11,7 +11,7 @@ it is up to you to show me best practices and ways to create this project as rea
 
 ## Layout
 - `Server/` – REST API (Node.js, Express 5, PostgreSQL via `pg`, ES modules)
-- `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui, React Router 8 data mode, TanStack Query; later React Hook Form + Zod)
+- `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui, React Router 8 data mode, TanStack Query, React Hook Form + Zod, Sonner)
 
 ## Git workflow
 - `main` is protected: no direct pushes. Every change goes through a pull request and needs the CI checks to pass.
@@ -49,6 +49,9 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - `lib/api-client.ts` – `api.get/post/patch/put/delete`: same-origin `/api`, unwraps `data`, throws `ApiError` (`status`, `message`, `errors`). On 401 it refreshes once and retries; parallel 401s share one refresh (refresh tokens are single use, reuse revokes the session)
 - Auth state = query `['auth','me']` (`useCurrentUser`, null = visitor). Any 401 that survives the refresh sets it to null. Logout clears the whole query cache
 - Protected routes: layout route `<RequireAuth />` / `<RequireAuth role="admin" />` → visitors go to `/login?redirect=…` (UX only, the API enforces access)
+- Guest-only routes (login, register): layout route `<GuestOnly />` sends logged-in users to `safeRedirect(?redirect)` (only in-app paths, prevents open redirects); it also does the redirect after login
+- Forms: React Hook Form + `zodResolver` with client schemas in `features/<feature>/schemas.ts` that mirror the server rules (UX only). `TextField`/`FormAlert` in `components/form/`; `setServerErrors()` (`lib/form-errors.ts`) puts API field errors on inputs, the rest on `root.server`
+- Success messages: `toast` from `sonner` (`<Toaster />` in `App.tsx`); errors stay inline in the form
 - Tests: `mockApi()` in `src/test/mock-api.ts` stubs fetch per `"METHOD /path"`; `renderRoute(path)` in `src/test/render.tsx` mounts the real routes in a memory router
 
 ## Architecture (Server/src)
