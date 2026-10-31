@@ -53,7 +53,8 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - Guest-only routes (login, register): layout route `<GuestOnly />` sends logged-in users to `safeRedirect(?redirect)` (only in-app paths, prevents open redirects); it also does the redirect after login
 - Forms: React Hook Form + `zodResolver` with client schemas in `features/<feature>/schemas.ts` that mirror the server rules (UX only). `TextField`/`FormAlert` in `components/form/`; `setServerErrors()` (`lib/form-errors.ts`) puts API field errors on inputs, the rest on `root.server`
 - Success messages: `toast` from `sonner` (`<Toaster />` in `App.tsx`); errors stay inline in the form
-- Tests: `mockApi()` in `src/test/mock-api.ts` stubs fetch per `"METHOD /path"`; `renderRoute(path)` in `src/test/render.tsx` mounts the real routes in a memory router
+- Shop (`/`, `ShopPage`): filters live in the URL (`?q=&category=<slug>&page=`), parsed/built only via `features/products/shop-params.ts`; the category slug is resolved to `category_id` from the category tree before products load. `formatPrice(cents)` in `lib/format.ts` for all prices. Lists use `placeholderData: keepPreviousData`
+- Tests: `mockApi()` in `src/test/mock-api.ts` stubs fetch per `"METHOD /path"` (a key without `?query` also matches requests with one; an empty shop for `GET /categories` and `GET /products` is mocked by default); `renderRoute(path)` in `src/test/render.tsx` mounts the real routes in a memory router
 
 ## Architecture (Server/src)
 Feature modules in `src/modules/<feature>/`, each with the same layers:

@@ -13,11 +13,11 @@ const loggedInAs = (role: 'customer' | 'admin' = 'customer') =>
   });
 
 describe('routing', () => {
-  it('renders the home page inside the layout', async () => {
+  it('renders the shop as home page inside the layout', async () => {
     loggedOut();
     renderRoute('/');
 
-    expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'All products' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ecommerce Shop' })).toBeInTheDocument();
   });
 
