@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet, ScrollRestoration } from 'react-router';
 import { VerifyEmailBanner } from '@/features/auth/components/VerifyEmailBanner';
 import { Footer } from './Footer';
 import { Header } from './Header';
@@ -12,6 +12,8 @@ export function RootLayout() {
         <Outlet />
       </main>
       <Footer />
+      {/* New page: scroll to top; back/forward: restore the previous position */}
+      <ScrollRestoration />
     </div>
   );
 }

@@ -5,12 +5,12 @@ import { RequireAuth } from '@/features/auth/components/RequireAuth';
 import { AccountPage } from '@/pages/AccountPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
+import { ShopPage } from '@/pages/ShopPage';
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
 
 // Kept separate from the browser router so tests can mount the same routes in a memory router
@@ -19,7 +19,7 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <HomePage /> },
+      { index: true, element: <ShopPage /> },
       {
         element: <GuestOnly />,
         children: [
