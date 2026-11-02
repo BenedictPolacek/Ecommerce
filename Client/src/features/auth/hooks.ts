@@ -1,4 +1,5 @@
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
 import {
   forgotPassword,
   getCurrentUser,
@@ -50,15 +51,26 @@ function endSession(queryClient: QueryClient) {
   queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== authKeys.me[0] });
 }
 
-export function useLogout() {
+/**
+ * Leaving on purpose (logout, deleted account): go to the shop first, then end the session.
+ * In the other order the protected page still on screen would see "no user" and
+ * RequireAuth would send it to /login?redirect=... instead.
+ * flushSync: React Router normally renders the new page in a transition (later), while
+ * the user update renders at once. This way the shop is on screen before we continue.
+ * That only works for a page that is not lazy loaded, so the target is always the shop.
+ */
+export function useLeaveSession() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  return useMutation({
-    mutationFn: logout,
-    // Even if the request failed, the user wanted to leave: forget everything locally
-    onSettled: () => endSession(queryClient),
-  });
+  return async () => {
+    await navigate('/', { flushSync: true });
+    endSession(queryClient);
+  };
 }
+
+/** The caller ends the session afterwards with useLeaveSession (also if the request failed) */
+export const useLogout = () => useMutation({ mutationFn: logout });
 
 export function useVerifyEmail() {
   const queryClient = useQueryClient();

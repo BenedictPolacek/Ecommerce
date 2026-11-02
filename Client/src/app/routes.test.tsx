@@ -37,6 +37,24 @@ describe('auth state in the header', () => {
     expect(await screen.findByRole('link', { name: 'Log in' })).toBeInTheDocument();
   });
 
+  it('logs out on a protected page and goes to the shop, not to the login page', async () => {
+    mockApi({
+      'GET /users/me': ok({ user: buildUser() }),
+      'POST /auth/logout': ok(),
+      'GET /orders': ok({
+        orders: [],
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+      }),
+    });
+    const { router } = renderRoute('/orders');
+    expect(await screen.findByRole('heading', { name: 'My orders' })).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Log out' }));
+
+    expect(await screen.findByRole('link', { name: 'Log in' })).toBeInTheDocument();
+    expect(router.state.location).toMatchObject({ pathname: '/', search: '' });
+  });
+
   it('shows the user name and logs out', async () => {
     const fetchMock = loggedInAs('customer');
     renderRoute('/');

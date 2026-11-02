@@ -1,6 +1,17 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authKeys } from '@/features/auth/hooks';
-import { changePassword, updateProfile } from './api';
+import {
+  changePassword,
+  deleteAccount,
+  getSessions,
+  logoutAll,
+  revokeSession,
+  updateProfile,
+} from './api';
+
+export const sessionKeys = {
+  all: ['sessions'] as const,
+};
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
@@ -12,4 +23,29 @@ export function useUpdateProfile() {
   });
 }
 
-export const useChangePassword = () => useMutation({ mutationFn: changePassword });
+export function useChangePassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: changePassword,
+    // The server ended the other sessions: the device list is outdated
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
+  });
+}
+
+export const useSessions = () => useQuery({ queryKey: sessionKeys.all, queryFn: getSessions });
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: revokeSession,
+    // Also after an error: a 404 means the session already ended somewhere else
+    onSettled: () => queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
+  });
+}
+
+/** Both also end the session in this browser: the caller leaves with useLeaveSession */
+export const useLogoutAll = () => useMutation({ mutationFn: logoutAll });
+
+export const useDeleteAccount = () => useMutation({ mutationFn: deleteAccount });

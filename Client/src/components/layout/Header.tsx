@@ -1,7 +1,7 @@
-import { Link, NavLink, useNavigate } from 'react-router';
+import { Link, NavLink } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useCurrentUser, useLogout } from '@/features/auth/hooks';
+import { useCurrentUser, useLeaveSession, useLogout } from '@/features/auth/hooks';
 import { CartLink } from '@/features/cart/components/CartLink';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -10,12 +10,13 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
-  const navigate = useNavigate();
+  const leaveSession = useLeaveSession();
 
   const handleLogout = () =>
     logout.mutate(undefined, {
-      onSettled: () => {
-        navigate('/');
+      // Even if the request failed, the user wanted to leave: forget everything locally
+      onSettled: async () => {
+        await leaveSession();
         toast.success('You have been logged out.');
       },
     });

@@ -75,6 +75,13 @@ export const routes: RouteObject[] = [
                     Component: m.AddressesPage,
                   })),
               },
+              {
+                path: 'security',
+                lazy: () =>
+                  import('@/pages/account/SecurityPage').then((m) => ({
+                    Component: m.SecurityPage,
+                  })),
+              },
             ],
           },
           {
