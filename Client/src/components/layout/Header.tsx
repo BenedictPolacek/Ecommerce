@@ -36,6 +36,9 @@ export function Header() {
                   Admin
                 </NavLink>
               )}
+              <NavLink to="/orders" className={navLinkClass}>
+                Orders
+              </NavLink>
               <NavLink to="/account" className={navLinkClass}>
                 {user.first_name}
               </NavLink>

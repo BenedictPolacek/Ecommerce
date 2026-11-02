@@ -13,3 +13,15 @@ export function formatPrice(cents: number): string {
 export function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
+
+const dateFormatter = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium' });
+const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
+/** ISO timestamp from the API -> "2 Nov 2026" (in the browser's time zone) */
+export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
+
+/** ISO timestamp from the API -> "2 Nov 2026, 14:05" */
+export const formatDateTime = (iso: string) => dateTimeFormatter.format(new Date(iso));

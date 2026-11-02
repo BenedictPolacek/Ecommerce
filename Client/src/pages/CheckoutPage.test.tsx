@@ -1,9 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import type { Address } from '@/features/addresses/types';
 import type { Cart } from '@/features/cart/types';
-import type { Order } from '@/features/orders/types';
+import { buildOrder, homeAddress } from '@/test/fixtures';
 import { emptyCart, fail, mockApi, ok } from '@/test/mock-api';
 import { buildUser, renderRoute } from '@/test/render';
 
@@ -33,49 +32,8 @@ const cart: Cart = {
   totalCents: 5000,
 };
 
-const home: Address = {
-  id: 'a0000000-0000-4000-8000-000000000001',
-  user_id: 'user-1',
-  address_line1: 'Hauptstrasse 1',
-  address_line2: null,
-  city: 'Berlin',
-  state: null,
-  postal_code: '10115',
-  country: 'DE',
-  is_default: true,
-  created_at: '2026-10-01T10:00:00.000Z',
-  updated_at: '2026-10-01T10:00:00.000Z',
-};
-
-const order: Order = {
-  id: 'o0000000-0000-4000-8000-000000000001',
-  order_number: 'ORD-2026-000042',
-  user_id: 'user-1',
-  status: 'pending',
-  currency: 'EUR',
-  subtotal_cents: 5000,
-  shipping_fee_cents: 0,
-  tax_cents: 798,
-  total_cents: 5000,
-  vat_rate_percent: 19,
-  shipping_address: { ...home },
-  billing_address: { ...home },
-  items: [
-    {
-      id: 'oi-1',
-      order_id: 'o0000000-0000-4000-8000-000000000001',
-      product_id: 'p0000000-0000-4000-8000-000000000001',
-      product_name: 'Desk Lamp',
-      unit_price_cents: 2500,
-      quantity: 2,
-    },
-  ],
-  status_history: [
-    { from_status: null, to_status: 'pending', created_at: '2026-10-01T10:00:00.000Z' },
-  ],
-  created_at: '2026-10-01T10:00:00.000Z',
-  updated_at: '2026-10-01T10:00:00.000Z',
-};
+const home = homeAddress;
+const order = buildOrder();
 
 const checkout = (
   { addresses = [home], verified = true } = {},
