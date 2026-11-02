@@ -1,12 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addressKeys } from '@/features/addresses/hooks';
 import { cartKeys } from '@/features/cart/hooks';
 import { productKeys } from '@/features/products/hooks';
-import { getOrder, placeOrder } from './api';
+import { getMyOrders, getOrder, placeOrder } from './api';
+import type { OrderListParams } from './types';
 
 export const orderKeys = {
   all: ['orders'] as const,
   lists: () => [...orderKeys.all, 'list'] as const,
+  list: (params: OrderListParams) => [...orderKeys.lists(), params] as const,
   detail: (orderNumber: string) => [...orderKeys.all, 'detail', orderNumber] as const,
 };
 
@@ -14,6 +16,14 @@ export function useOrder(orderNumber: string) {
   return useQuery({
     queryKey: orderKeys.detail(orderNumber),
     queryFn: () => getOrder(orderNumber),
+  });
+}
+
+export function useMyOrders(params: OrderListParams) {
+  return useQuery({
+    queryKey: orderKeys.list(params),
+    queryFn: () => getMyOrders(params),
+    placeholderData: keepPreviousData,
   });
 }
 

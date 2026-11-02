@@ -1,4 +1,5 @@
 import type { AddressFields } from '@/features/addresses/types';
+import type { Pagination } from '@/features/products/types';
 
 export type OrderStatus =
   'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
@@ -18,6 +19,46 @@ export interface OrderStatusChange {
   created_at: string;
 }
 
+export interface Payment {
+  id: string;
+  order_id: string;
+  /** 'manual' = recorded by an admin, e.g. a bank transfer */
+  provider: string;
+  provider_payment_id: string | null;
+  status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'refunded';
+  amount_cents: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** One row of GET /orders (no items, but their total quantity) */
+export interface OrderSummary {
+  id: string;
+  order_number: string;
+  user_id: string;
+  status: OrderStatus;
+  currency: string;
+  subtotal_cents: number;
+  shipping_fee_cents: number;
+  tax_cents: number;
+  total_cents: number;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderList {
+  orders: OrderSummary[];
+  pagination: Pagination;
+}
+
+export interface OrderListParams {
+  status?: OrderStatus;
+  page: number;
+  limit: number;
+}
+
 /** Order with details (POST /orders, GET /orders/:idOrNumber) */
 export interface Order {
   id: string;
@@ -35,6 +76,7 @@ export interface Order {
   shipping_address: AddressFields;
   billing_address: AddressFields;
   items: OrderItem[];
+  payments: Payment[];
   status_history: OrderStatusChange[];
   created_at: string;
   updated_at: string;
