@@ -44,6 +44,7 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 
 ## Architecture (Client/src)
 - `app/` – `App.tsx` (providers), `routes.tsx` (route objects, shared with tests), `query-client.ts`
+- Code splitting: every page except `ShopPage` (landing page) is loaded with the route's `lazy: () => import('@/pages/X').then((m) => ({ Component: m.X }))`; new pages follow this pattern
 - `features/<feature>/` – `types.ts` (hand-written API types, snake_case like the API), `api.ts` (calls via `api`), `hooks.ts` (TanStack Query hooks + query keys), `components/`
 - `pages/` – one component per route; `components/layout/` – Header, Footer, RootLayout, PageStatus; `components/ui/` – shadcn
 - `lib/api-client.ts` – `api.get/post/patch/put/delete`: same-origin `/api`, unwraps `data`, throws `ApiError` (`status`, `message`, `errors`). On 401 it refreshes once and retries; parallel 401s share one refresh (refresh tokens are single use, reuse revokes the session)
