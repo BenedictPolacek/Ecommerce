@@ -16,6 +16,8 @@ export function AddressFormFields({ name }: { name: string }) {
   const errorOf = (key: AddressField) =>
     getFieldState(field(key), formState).error as FormFieldError | undefined;
   const id = (key: AddressField) => `${name}-${key}`;
+  // Autofill tokens: "shipping"/"billing" are valid section names, anything else is not
+  const section = name === 'shipping' || name === 'billing' ? `${name} ` : '';
 
   return (
     <div className="grid gap-4 sm:grid-cols-6">
@@ -23,7 +25,7 @@ export function AddressFormFields({ name }: { name: string }) {
         <TextField
           id={id('address_line1')}
           label="Street and number"
-          autoComplete={`${name} address-line1`}
+          autoComplete={`${section}address-line1`}
           error={errorOf('address_line1')}
           {...register(field('address_line1'))}
         />
@@ -32,7 +34,7 @@ export function AddressFormFields({ name }: { name: string }) {
         <TextField
           id={id('address_line2')}
           label="Address line 2 (optional)"
-          autoComplete={`${name} address-line2`}
+          autoComplete={`${section}address-line2`}
           error={errorOf('address_line2')}
           {...register(field('address_line2'))}
         />
@@ -41,7 +43,7 @@ export function AddressFormFields({ name }: { name: string }) {
         <TextField
           id={id('postal_code')}
           label="Postal code"
-          autoComplete={`${name} postal-code`}
+          autoComplete={`${section}postal-code`}
           error={errorOf('postal_code')}
           {...register(field('postal_code'))}
         />
@@ -50,7 +52,7 @@ export function AddressFormFields({ name }: { name: string }) {
         <TextField
           id={id('city')}
           label="City"
-          autoComplete={`${name} address-level2`}
+          autoComplete={`${section}address-level2`}
           error={errorOf('city')}
           {...register(field('city'))}
         />
@@ -59,7 +61,7 @@ export function AddressFormFields({ name }: { name: string }) {
         <TextField
           id={id('state')}
           label="State / region (optional)"
-          autoComplete={`${name} address-level1`}
+          autoComplete={`${section}address-level1`}
           error={errorOf('state')}
           {...register(field('state'))}
         />
@@ -70,7 +72,7 @@ export function AddressFormFields({ name }: { name: string }) {
           {/* Native select: accessible and works with autofill without extra code */}
           <select
             id={id('country')}
-            autoComplete={`${name} country`}
+            autoComplete={`${section}country`}
             className="border-input h-9 rounded-md border bg-transparent px-3 text-sm shadow-xs"
             {...register(field('country'))}
           >
