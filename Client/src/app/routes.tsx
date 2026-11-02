@@ -66,6 +66,17 @@ export const routes: RouteObject[] = [
             path: 'cart',
             lazy: () => import('@/pages/CartPage').then((m) => ({ Component: m.CartPage })),
           },
+          {
+            path: 'checkout',
+            lazy: () => import('@/pages/CheckoutPage').then((m) => ({ Component: m.CheckoutPage })),
+          },
+          {
+            path: 'checkout/confirmation/:orderNumber',
+            lazy: () =>
+              import('@/pages/OrderConfirmationPage').then((m) => ({
+                Component: m.OrderConfirmationPage,
+              })),
+          },
         ],
       },
       {
