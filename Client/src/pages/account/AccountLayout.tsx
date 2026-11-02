@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 const sections = [
   // end: only active on /account itself, not on /account/addresses
   { to: '/account', label: 'Profile', end: true },
+  { to: '/account/addresses', label: 'Addresses', end: false },
   { to: '/orders', label: 'Orders', end: false },
 ];
 
