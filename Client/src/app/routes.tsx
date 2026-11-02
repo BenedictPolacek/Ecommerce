@@ -60,7 +60,15 @@ export const routes: RouteObject[] = [
         children: [
           {
             path: 'account',
-            lazy: () => import('@/pages/AccountPage').then((m) => ({ Component: m.AccountPage })),
+            lazy: () =>
+              import('@/pages/account/AccountLayout').then((m) => ({ Component: m.AccountLayout })),
+            children: [
+              {
+                index: true,
+                lazy: () =>
+                  import('@/pages/account/ProfilePage').then((m) => ({ Component: m.ProfilePage })),
+              },
+            ],
           },
           {
             path: 'cart',
