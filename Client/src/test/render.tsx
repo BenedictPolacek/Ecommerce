@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router';
+import { createMemoryRouter } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { createQueryClient } from '@/app/query-client';
 import { routes } from '@/app/routes';
 import { Toaster } from '@/components/ui/sonner';
