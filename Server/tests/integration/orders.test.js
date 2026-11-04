@@ -67,6 +67,46 @@ describe('Orders', () => {
       expect(res.body.data.order.id).toBe(order.id);
     });
 
+    it('shows admins the customer of the order, customers do not get it', async () => {
+      const order = await placeOrder(customer);
+
+      const asAdmin = await api()
+        .get(`/api/orders/${order.order_number}`)
+        .set(authHeader(admin.token));
+      const asCustomer = await api()
+        .get(`/api/orders/${order.order_number}`)
+        .set(authHeader(customer.token));
+
+      expect(asAdmin.body.data.order.customer).toEqual({
+        id: customer.user.id,
+        email: customer.user.email,
+        first_name: 'Test',
+        last_name: 'User',
+      });
+      expect(asCustomer.body.data.order).not.toHaveProperty('customer');
+    });
+
+    it('still shows admins the (anonymized) customer after the account was deleted', async () => {
+      const order = await placeOrder(customer);
+      // Open orders block the deletion: cancel it first
+      await api()
+        .patch(`/api/orders/${order.id}/status`)
+        .set(authHeader(admin.token))
+        .send({ status: 'cancelled' });
+      await api()
+        .delete('/api/users/me')
+        .set(authHeader(customer.token))
+        .send({ password: customer.password });
+
+      const res = await api().get(`/api/orders/${order.id}`).set(authHeader(admin.token));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.order.customer).toEqual(
+        expect.objectContaining({ id: customer.user.id, first_name: 'Deleted' })
+      );
+      expect(res.body.data.order.customer.email).toMatch(/@deleted\.invalid$/);
+    });
+
     it("returns 404 for someone else's order number, so numbers cannot be probed", async () => {
       const order = await placeOrder(customer);
       const other = await createUser();

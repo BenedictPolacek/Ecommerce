@@ -1,4 +1,4 @@
-import type { RouteObject } from 'react-router';
+import { Navigate, type RouteObject } from 'react-router';
 import { PageLoading } from '@/components/layout/PageStatus';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { GuestOnly } from '@/features/auth/components/GuestOnly';
@@ -115,7 +115,26 @@ export const routes: RouteObject[] = [
         children: [
           {
             path: 'admin',
-            lazy: () => import('@/pages/AdminPage').then((m) => ({ Component: m.AdminPage })),
+            lazy: () =>
+              import('@/pages/admin/AdminLayout').then((m) => ({ Component: m.AdminLayout })),
+            children: [
+              // Orders are the daily work: the admin area starts there
+              { index: true, element: <Navigate to="orders" replace /> },
+              {
+                path: 'orders',
+                lazy: () =>
+                  import('@/pages/admin/AdminOrdersPage').then((m) => ({
+                    Component: m.AdminOrdersPage,
+                  })),
+              },
+              {
+                path: 'orders/:orderNumber',
+                lazy: () =>
+                  import('@/pages/admin/AdminOrderDetailPage').then((m) => ({
+                    Component: m.AdminOrderDetailPage,
+                  })),
+              },
+            ],
           },
         ],
       },

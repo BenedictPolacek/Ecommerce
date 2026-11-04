@@ -39,13 +39,17 @@ const toCustomerHistory = ({ from_status, to_status, created_at }) => ({
 
 // Full order as returned by the detail endpoints
 const withDetails = async (order, { isAdmin }) => {
-  const [items, payments, history] = await Promise.all([
+  const [items, payments, history, customer] = await Promise.all([
     orderRepository.findOrderItems(order.id),
     paymentRepository.findByOrderId(order.id),
     orderRepository.findStatusHistory(order.id),
+    // Admins see who ordered (like in the admin list); customers know themselves
+    isAdmin ? orderRepository.findCustomer(order.user_id) : undefined,
   ]);
-  const status_history = isAdmin ? history : history.map(toCustomerHistory);
-  return { ...order, items, payments, status_history };
+  if (!isAdmin) {
+    return { ...order, items, payments, status_history: history.map(toCustomerHistory) };
+  }
+  return { ...order, items, payments, status_history: history, customer };
 };
 
 const listOrders = async ({ userId, status, search, withCustomer, page, limit }) => {

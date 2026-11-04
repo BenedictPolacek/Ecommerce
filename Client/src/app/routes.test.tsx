@@ -94,11 +94,19 @@ describe('protected routes', () => {
     expect(await screen.findByRole('heading', { name: 'Access denied' })).toBeInTheDocument();
   });
 
-  it('lets admins into the admin area', async () => {
-    loggedInAs('admin');
-    renderRoute('/admin');
+  it('lets admins into the admin area, starting with the orders', async () => {
+    mockApi({
+      'GET /users/me': ok({ user: buildUser({ role: 'admin' }) }),
+      'GET /orders/all': ok({
+        orders: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      }),
+    });
+    const { router } = renderRoute('/admin');
 
     expect(await screen.findByRole('heading', { name: 'Admin' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin/orders');
     expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
   });
 });
