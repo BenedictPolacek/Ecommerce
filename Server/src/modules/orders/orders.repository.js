@@ -103,8 +103,10 @@ export const orderRepository = {
    * @param {Object} options
    * @param {string} [options.userId] - Only orders of this user (omit for all, admin)
    * @param {string} [options.status] - Only orders with this status
+   * @param {string} [options.search] - Part of the order number or the customer email
+   * @param {boolean} [options.withCustomer] - Add `customer` (id, email, name; admin list)
    */
-  findOrderSummaries: async ({ userId, status, limit, offset }) => {
+  findOrderSummaries: async ({ userId, status, search, withCustomer = false, limit, offset }) => {
     const conditions = [];
     const values = [];
     if (userId !== undefined) {
@@ -115,9 +117,23 @@ export const orderRepository = {
       values.push(status);
       conditions.push(`o.status = $${values.length}`);
     }
+    if (search !== undefined) {
+      // % and _ are wildcards in LIKE: escape them, the search text is matched literally
+      values.push(`%${search.replace(/[\\%_]/g, '\\$&')}%`);
+      conditions.push(
+        `(o.order_number ILIKE $${values.length} OR u.email ILIKE $${values.length})`
+      );
+    }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    // Every order has a user (NOT NULL, ON DELETE RESTRICT); deleted users are anonymized
+    const from = 'FROM orders o JOIN users u ON u.id = o.user_id';
+    const customer = withCustomer
+      ? `, json_build_object(
+           'id', u.id, 'email', u.email, 'first_name', u.first_name, 'last_name', u.last_name
+         ) AS customer`
+      : '';
 
-    const countResult = await pool.query(`SELECT COUNT(*) FROM orders o ${where}`, values);
+    const countResult = await pool.query(`SELECT COUNT(*) ${from} ${where}`, values);
     const total = parseInt(countResult.rows[0].count, 10);
 
     const { rows } = await pool.query(
@@ -127,7 +143,8 @@ export const orderRepository = {
          o.created_at, o.updated_at,
          (SELECT COALESCE(SUM(oi.quantity), 0)::int
           FROM order_items oi WHERE oi.order_id = o.id) AS item_count
-       FROM orders o
+         ${customer}
+       ${from}
        ${where}
        ORDER BY o.created_at DESC, o.id DESC -- id as tiebreaker: stable order across pages
        LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,

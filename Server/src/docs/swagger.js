@@ -530,6 +530,16 @@ export const swaggerSpec = {
           tax_cents: { type: 'integer', example: 415 },
           total_cents: { type: 'integer', example: 2599 },
           item_count: { type: 'integer', example: 2, description: 'Number of units ordered' },
+          customer: {
+            type: 'object',
+            description: 'Only in the admin list (GET /orders/all)',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              email: { type: 'string', format: 'email' },
+              first_name: { type: 'string', example: 'Jane' },
+              last_name: { type: 'string', example: 'Doe' },
+            },
+          },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
         },
@@ -2351,8 +2361,18 @@ export const swaggerSpec = {
       get: {
         tags: ['Orders'],
         summary: 'List all platform orders (Admin only, paginated, newest first)',
+        description: 'Each order includes its `customer`. Deleted customers are anonymized.',
         security: [{ BearerAuth: [] }, { CookieAuth: [] }],
-        parameters: ORDER_LIST_PARAMETERS,
+        parameters: [
+          ...ORDER_LIST_PARAMETERS,
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', maxLength: 100 },
+            description: 'Part of the order number or the customer email (case-insensitive)',
+          },
+        ],
         responses: {
           200: {
             description: 'One page of order summaries',

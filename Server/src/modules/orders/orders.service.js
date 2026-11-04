@@ -48,10 +48,12 @@ const withDetails = async (order, { isAdmin }) => {
   return { ...order, items, payments, status_history };
 };
 
-const listOrders = async ({ userId, status, page, limit }) => {
+const listOrders = async ({ userId, status, search, withCustomer, page, limit }) => {
   const { orders, total } = await orderRepository.findOrderSummaries({
     userId,
     status,
+    search,
+    withCustomer,
     limit,
     offset: toOffset({ page, limit }),
   });
@@ -188,10 +190,10 @@ export const orderService = {
   },
 
   /**
-   * One page of all orders in the system (Admin only)
+   * One page of all orders in the system (Admin only), with the customer of each order
    */
   async getAllOrders(query) {
-    return listOrders(query);
+    return listOrders({ ...query, withCustomer: true });
   },
 
   /**
