@@ -49,6 +49,17 @@ export const orderListQuerySchema = z.object({
   ...paginationQuery,
 });
 
+// Admin list: also search by order number or customer email (part of it is enough)
+export const adminOrderListQuerySchema = orderListQuerySchema.extend({
+  search: z
+    .string()
+    .trim()
+    .max(100, 'search cannot exceed 100 characters')
+    .optional()
+    // "?search=" (empty field in a search form) means no search
+    .transform((value) => value || undefined),
+});
+
 export const orderIdParamSchema = z.object({
   id: z.uuid('Invalid order ID format (must be a valid UUID)'),
 });
@@ -58,5 +69,6 @@ export default {
   checkoutSchema,
   orderStatusEnum,
   updateOrderStatusSchema,
+  adminOrderListQuerySchema,
   orderIdParamSchema,
 };

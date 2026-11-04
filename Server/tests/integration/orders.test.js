@@ -206,6 +206,54 @@ describe('Orders', () => {
       expect(onlyPaid.body.data.orders.map((o) => o.id)).toEqual([paid.id]);
     });
 
+    it('shows the customer of each order in the admin list only', async () => {
+      await placeOrder(customer);
+
+      const all = await listAll();
+      const mine = await listMine(customer);
+
+      expect(all.body.data.orders[0].customer).toEqual({
+        id: customer.user.id,
+        email: customer.user.email,
+        first_name: 'Test',
+        last_name: 'User',
+      });
+      expect(mine.body.data.orders[0]).not.toHaveProperty('customer');
+    });
+
+    it('lets admins search by part of the order number or the email (any case)', async () => {
+      const mine = await placeOrder(customer);
+      const anna = await createUser({ email: `anna-${Date.now()}@shop-test.com` });
+      const annas = await placeOrder(anna);
+
+      const byNumber = await listAll(`?search=${mine.order_number.slice(-6).toLowerCase()}`);
+      const byEmail = await listAll('?search=ANNA-');
+      const empty = await listAll('?search=');
+
+      expect(byNumber.body.data.orders.map((o) => o.id)).toEqual([mine.id]);
+      expect(byEmail.body.data.orders.map((o) => o.id)).toEqual([annas.id]);
+      expect(byEmail.body.data.pagination.total).toBe(1);
+      expect(empty.body.data.pagination.total).toBe(2);
+    });
+
+    it('matches LIKE wildcards in the search literally', async () => {
+      await placeOrder(customer);
+
+      const percent = await listAll(`?search=${encodeURIComponent('%')}`);
+      const underscore = await listAll('?search=_');
+
+      expect(percent.body.data.orders).toEqual([]);
+      expect(underscore.body.data.orders).toEqual([]);
+    });
+
+    it('ignores the search in the customer list', async () => {
+      await placeOrder(customer);
+
+      const res = await listMine(customer, '?search=does-not-match');
+
+      expect(res.body.data.pagination.total).toBe(1);
+    });
+
     it('rejects an unknown status with 400', async () => {
       const res = await listAll('?status=lost');
 

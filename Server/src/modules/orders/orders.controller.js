@@ -1,6 +1,6 @@
 import { catchAsync } from '../../utils/catchAsync.js';
 import { orderService } from './orders.service.js';
-import { orderListQuerySchema } from './orders.validation.js';
+import { adminOrderListQuerySchema, orderListQuerySchema } from './orders.validation.js';
 
 export const ordersController = {
   /**
@@ -31,10 +31,10 @@ export const ordersController = {
 
   /**
    * One page of all orders in the system (Admin only)
-   * GET /api/orders/all?status=&page=&limit=
+   * GET /api/orders/all?status=&search=&page=&limit=
    */
   listAllOrders: catchAsync(async (req, res) => {
-    const query = orderListQuerySchema.parse(req.query);
+    const query = adminOrderListQuerySchema.parse(req.query);
     const result = await orderService.getAllOrders(query);
     res.status(200).json({
       success: true,
