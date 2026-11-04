@@ -12,6 +12,11 @@ const asAdmin = (extra: Parameters<typeof mockApi>[0] = {}) =>
   mockApi({
     'GET /users/me': ok({ user: buildUser({ role: 'admin' }) }),
     'GET /categories': ok({ categories: [audio] }),
+    // The edit page also shows the stock history
+    [`GET ${PRODUCT_PATH}/stock-movements`]: ok({
+      movements: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    }),
     ...extra,
   });
 
