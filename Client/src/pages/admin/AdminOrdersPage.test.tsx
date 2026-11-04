@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { AdminOrderSummary } from '@/features/admin-orders/types';
@@ -44,7 +44,7 @@ describe('admin order list', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Search' }));
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'pending');
 
-    expect(router.state.location.search).toBe('?status=pending&search=anna');
+    await waitFor(() => expect(router.state.location.search).toBe('?status=pending&search=anna'));
     const last = listQueries(fetchMock).at(-1)!;
     expect(last.get('search')).toBe('anna');
     expect(last.get('status')).toBe('pending');

@@ -48,8 +48,10 @@ describe('new product', () => {
       is_active: false,
       stock_quantity: 15,
     });
-    expect(router.state.location.pathname).toBe(`/admin${PRODUCT_PATH}`);
+    // The edit page is lazy loaded: the URL only changes once its code is there. Wait for the
+    // page first, checking the URL right after the toast was flaky on slower CI runners.
     expect(await screen.findByRole('heading', { name: 'Desk Lamp' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/admin${PRODUCT_PATH}`);
   });
 
   it('checks price, slug and stock before sending', async () => {
