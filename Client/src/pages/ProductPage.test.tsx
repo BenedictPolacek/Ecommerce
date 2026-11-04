@@ -1,44 +1,13 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import type { CategoryNode } from '@/features/categories/types';
 import type { Product } from '@/features/products/types';
+import { audio, buildProduct } from '@/test/fixtures';
 import { fail, mockApi, ok } from '@/test/mock-api';
 import { buildUser, renderRoute } from '@/test/render';
 
 const visitor = { 'GET /users/me': fail(401), 'POST /auth/refresh': fail(401) };
 const loggedIn = { 'GET /users/me': ok({ user: buildUser() }) };
-
-const audio: CategoryNode = {
-  id: 'c0000000-0000-4000-8000-000000000002',
-  parent_id: null,
-  name: 'Audio',
-  slug: 'audio',
-  description: null,
-  created_at: '2026-10-01T10:00:00.000Z',
-  updated_at: '2026-10-01T10:00:00.000Z',
-  children: [],
-};
-
-const buildProduct = (overrides: Partial<Product> = {}): Product => ({
-  id: 'p0000000-0000-4000-8000-000000000001',
-  name: 'Headphones',
-  slug: 'headphones',
-  sku: 'HP-1',
-  description: 'Wireless, 30 hours battery',
-  price_cents: 4999,
-  stock_quantity: 20,
-  is_active: true,
-  category_id: audio.id,
-  category_name: 'Audio',
-  images: [
-    { id: 'i1', url: 'https://img.example/front.png', alt_text: 'Front view', sort_order: 0 },
-    { id: 'i2', url: 'https://img.example/side.png', alt_text: 'Side view', sort_order: 1 },
-  ],
-  created_at: '2026-10-01T10:00:00.000Z',
-  updated_at: '2026-10-01T10:00:00.000Z',
-  ...overrides,
-});
 
 const withProduct = (product: Product, extra: Parameters<typeof mockApi>[0] = visitor) => ({
   'GET /categories': ok({ categories: [audio] }),

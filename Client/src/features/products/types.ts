@@ -8,7 +8,8 @@ export interface ProductSummary {
   id: string;
   name: string;
   slug: string;
-  sku: string;
+  /** Optional (stock keeping unit, the shop's own article number) */
+  sku: string | null;
   description: string | null;
   price_cents: number;
   stock_quantity: number;

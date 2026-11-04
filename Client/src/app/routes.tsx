@@ -134,6 +134,28 @@ export const routes: RouteObject[] = [
                     Component: m.AdminOrderDetailPage,
                   })),
               },
+              {
+                path: 'products',
+                lazy: () =>
+                  import('@/pages/admin/AdminProductsPage').then((m) => ({
+                    Component: m.AdminProductsPage,
+                  })),
+              },
+              {
+                // Static segments win over :productId, so "new" is never taken for an id
+                path: 'products/new',
+                lazy: () =>
+                  import('@/pages/admin/AdminProductNewPage').then((m) => ({
+                    Component: m.AdminProductNewPage,
+                  })),
+              },
+              {
+                path: 'products/:productId',
+                lazy: () =>
+                  import('@/pages/admin/AdminProductEditPage').then((m) => ({
+                    Component: m.AdminProductEditPage,
+                  })),
+              },
             ],
           },
         ],
