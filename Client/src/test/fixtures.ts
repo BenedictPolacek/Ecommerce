@@ -1,4 +1,5 @@
 import type { Address, AddressFields } from '@/features/addresses/types';
+import type { AdminOrder, AdminOrderSummary, OrderCustomer } from '@/features/admin-orders/types';
 import type { Order, OrderSummary, Payment } from '@/features/orders/types';
 
 // Shared test data. Builders take overrides, so each test only states what matters to it.
@@ -94,3 +95,30 @@ export const buildPayment = (overrides: Partial<Payment> = {}): Payment => ({
   updated_at: '2026-10-03T09:00:00.000Z',
   ...overrides,
 });
+
+export const customerAnna: OrderCustomer = {
+  id: 'user-1',
+  email: 'anna@example.com',
+  first_name: 'Anna',
+  last_name: 'Schmidt',
+};
+
+/** Order as an admin sees it: with customer, notes and who changed the status */
+export const buildAdminOrder = (overrides: Partial<AdminOrder> = {}): AdminOrder => {
+  const { status_history, ...order } = buildOrder();
+  return {
+    ...order,
+    customer: customerAnna,
+    status_history: status_history.map((entry, i) => ({
+      ...entry,
+      id: `h-${i}`,
+      changed_by: 'user-1',
+      note: null,
+    })),
+    ...overrides,
+  };
+};
+
+export const buildAdminOrderSummary = (
+  overrides: Partial<AdminOrderSummary> = {}
+): AdminOrderSummary => ({ ...buildOrderSummary(), customer: customerAnna, ...overrides });

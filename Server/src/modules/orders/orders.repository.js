@@ -182,6 +182,18 @@ export const orderRepository = {
   /**
    * Status history of an order, oldest first (reads like a timeline)
    */
+  /**
+   * The customer of an order for admins. Unlike userRepository.findById this also returns
+   * deleted (anonymized) users: their orders stay in the books.
+   */
+  findCustomer: async (userId) => {
+    const { rows } = await pool.query(
+      'SELECT id, email, first_name, last_name FROM users WHERE id = $1',
+      [userId]
+    );
+    return rows[0] ?? null;
+  },
+
   findStatusHistory: async (orderId) => {
     const { rows } = await pool.query(
       `SELECT * FROM order_status_history WHERE order_id = $1 ORDER BY created_at, id`,

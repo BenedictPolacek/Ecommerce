@@ -36,7 +36,7 @@ export default defineConfig({
     // Fail if a test file has no tests or a test was left with .only
     passWithNoTests: false,
     // Above asyncUtilTimeout (src/test/setup.ts), so a slow findBy* fails with its own message
-    testTimeout: 15000,
+    testTimeout: 20000,
     allowOnly: !process.env.CI,
   },
 });

@@ -516,6 +516,16 @@ export const swaggerSpec = {
           totalPages: { type: 'integer', example: 1 },
         },
       },
+      OrderCustomer: {
+        type: 'object',
+        description: 'Who placed the order (admins only). Deleted customers are anonymized.',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          first_name: { type: 'string', example: 'Jane' },
+          last_name: { type: 'string', example: 'Doe' },
+        },
+      },
       OrderSummary: {
         type: 'object',
         description: 'Order without items; GET /orders/{id} returns the full order',
@@ -531,14 +541,8 @@ export const swaggerSpec = {
           total_cents: { type: 'integer', example: 2599 },
           item_count: { type: 'integer', example: 2, description: 'Number of units ordered' },
           customer: {
-            type: 'object',
             description: 'Only in the admin list (GET /orders/all)',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              email: { type: 'string', format: 'email' },
-              first_name: { type: 'string', example: 'Jane' },
-              last_name: { type: 'string', example: 'Doe' },
-            },
+            allOf: [{ $ref: '#/components/schemas/OrderCustomer' }],
           },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
@@ -736,6 +740,10 @@ export const swaggerSpec = {
             type: 'array',
             description: 'Oldest first. Customers only get from_status, to_status and created_at.',
             items: { $ref: '#/components/schemas/OrderStatusHistoryEntry' },
+          },
+          customer: {
+            description: 'Only for admins',
+            allOf: [{ $ref: '#/components/schemas/OrderCustomer' }],
           },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },

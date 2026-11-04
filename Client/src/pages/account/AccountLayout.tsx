@@ -1,44 +1,20 @@
-import { NavLink, Outlet } from 'react-router';
-import { cn } from '@/lib/utils';
+import { SideNavLayout, type SideNavSection } from '@/components/layout/SideNavLayout';
 
-const sections = [
-  // end: only active on /account itself, not on /account/addresses
+const sections: SideNavSection[] = [
   { to: '/account', label: 'Profile', end: true },
-  { to: '/account/addresses', label: 'Addresses', end: false },
-  { to: '/account/security', label: 'Security', end: false },
-  { to: '/orders', label: 'Orders', end: false },
+  { to: '/account/addresses', label: 'Addresses' },
+  { to: '/account/security', label: 'Security' },
+  { to: '/orders', label: 'Orders' },
 ];
 
-/** Shared frame of all account pages: title and side menu, the page itself in the Outlet */
+/** Shared frame of all account pages, add new sections here */
 export function AccountLayout() {
   return (
-    <div className="flex flex-col gap-6 py-8">
-      <h1 className="text-2xl font-bold">My account</h1>
-      <div className="grid gap-8 md:grid-cols-[12rem_1fr]">
-        <nav aria-label="Account">
-          <ul className="flex gap-1 overflow-x-auto md:flex-col">
-            {sections.map(({ to, label, end }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  end={end}
-                  className={({ isActive }) =>
-                    cn(
-                      'hover:bg-accent block rounded-md px-3 py-2 text-sm whitespace-nowrap',
-                      isActive ? 'bg-accent font-medium' : 'text-muted-foreground'
-                    )
-                  }
-                >
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="flex max-w-2xl flex-col gap-10">
-          <Outlet />
-        </div>
-      </div>
-    </div>
+    <SideNavLayout
+      title="My account"
+      navLabel="Account"
+      sections={sections}
+      contentClassName="max-w-2xl"
+    />
   );
 }
