@@ -1,6 +1,8 @@
 import type { Address, AddressFields } from '@/features/addresses/types';
 import type { AdminOrder, AdminOrderSummary, OrderCustomer } from '@/features/admin-orders/types';
+import type { CategoryNode } from '@/features/categories/types';
 import type { Order, OrderSummary, Payment } from '@/features/orders/types';
+import type { Product } from '@/features/products/types';
 
 // Shared test data. Builders take overrides, so each test only states what matters to it.
 
@@ -122,3 +124,34 @@ export const buildAdminOrder = (overrides: Partial<AdminOrder> = {}): AdminOrder
 export const buildAdminOrderSummary = (
   overrides: Partial<AdminOrderSummary> = {}
 ): AdminOrderSummary => ({ ...buildOrderSummary(), customer: customerAnna, ...overrides });
+
+export const audio: CategoryNode = {
+  id: 'c0000000-0000-4000-8000-000000000002',
+  parent_id: null,
+  name: 'Audio',
+  slug: 'audio',
+  description: null,
+  created_at: '2026-10-01T10:00:00.000Z',
+  updated_at: '2026-10-01T10:00:00.000Z',
+  children: [],
+};
+
+export const buildProduct = (overrides: Partial<Product> = {}): Product => ({
+  id: 'p0000000-0000-4000-8000-000000000001',
+  name: 'Headphones',
+  slug: 'headphones',
+  sku: 'HP-1',
+  description: 'Wireless, 30 hours battery',
+  price_cents: 4999,
+  stock_quantity: 20,
+  is_active: true,
+  category_id: audio.id,
+  category_name: 'Audio',
+  images: [
+    { id: 'i1', url: 'https://img.example/front.png', alt_text: 'Front view', sort_order: 0 },
+    { id: 'i2', url: 'https://img.example/side.png', alt_text: 'Side view', sort_order: 1 },
+  ],
+  created_at: '2026-10-01T10:00:00.000Z',
+  updated_at: '2026-10-01T10:00:00.000Z',
+  ...overrides,
+});

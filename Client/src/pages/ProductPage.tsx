@@ -92,7 +92,7 @@ export function ProductPage() {
               <p className="text-muted-foreground whitespace-pre-line">{product.description}</p>
             </section>
           )}
-          <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>
+          {product.sku && <p className="text-muted-foreground text-xs">SKU: {product.sku}</p>}
         </div>
       </div>
     </div>
