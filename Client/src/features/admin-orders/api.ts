@@ -8,10 +8,11 @@ import type {
 } from './types';
 
 /** All orders of the shop, newest first */
-export function getAdminOrders({ status, search, page, limit }: AdminOrderListParams) {
+export function getAdminOrders({ status, search, userId, page, limit }: AdminOrderListParams) {
   const query = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (status) query.set('status', status);
   if (search) query.set('search', search);
+  if (userId) query.set('user_id', userId);
   return api.get<AdminOrderList>(`/orders/all?${query}`);
 }
 
