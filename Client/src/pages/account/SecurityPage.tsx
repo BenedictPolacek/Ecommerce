@@ -1,8 +1,13 @@
+import { Link } from 'react-router';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
 import { LogoutAllButton } from '@/features/account/components/LogoutAllButton';
 import { SessionList } from '@/features/account/components/SessionList';
+import { useCurrentUser } from '@/features/auth/hooks';
 
 export function SecurityPage() {
+  // RequireAuth only renders this page with a logged-in user
+  const { data: user } = useCurrentUser();
+
   return (
     <>
       <title>Security | Ecommerce Shop</title>
@@ -31,7 +36,18 @@ export function SecurityPage() {
             Accounts with orders that are not completed yet cannot be deleted.
           </p>
         </div>
-        <DeleteAccountDialog />
+        {user?.has_password === false ? (
+          // Deleting asks for the password: a stolen session alone cannot delete the account
+          <p className="text-sm">
+            To confirm a deletion we ask for your password. You sign in with Google or GitHub, so{' '}
+            <Link to="/account" className="underline underline-offset-4">
+              set a password first
+            </Link>
+            .
+          </p>
+        ) : (
+          <DeleteAccountDialog />
+        )}
       </section>
     </>
   );

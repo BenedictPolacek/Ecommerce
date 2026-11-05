@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import {
   forgotPassword,
   getCurrentUser,
+  getOAuthProviders,
   login,
   logout,
   register,
@@ -21,6 +22,15 @@ export function useCurrentUser() {
     queryKey: authKeys.me,
     queryFn: getCurrentUser,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Configured sign-in providers; they only change with a server restart */
+export function useOAuthProviders() {
+  return useQuery({
+    queryKey: ['auth', 'oauth-providers'],
+    queryFn: getOAuthProviders,
+    staleTime: Infinity,
   });
 }
 

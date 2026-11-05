@@ -45,9 +45,10 @@ describe('profile', () => {
   });
 
   it('saves the name and updates the header right away', async () => {
-    const fetchMock = withUser({
-      'PATCH /users/me': ok({ user: { ...jane, first_name: 'Janet' } }),
-    });
+    // Like the real API: the response has the profile fields, but no has_password
+    const saved: Partial<typeof jane> = { ...jane, first_name: 'Janet' };
+    delete saved.has_password;
+    const fetchMock = withUser({ 'PATCH /users/me': ok({ user: saved }) });
     renderRoute('/account');
 
     const firstName = await screen.findByLabelText('First name');
@@ -59,6 +60,8 @@ describe('profile', () => {
     expect(bodyOf(fetchMock, '/users/me')).toEqual({ first_name: 'Janet', last_name: 'Doe' });
     expect(screen.getByRole('link', { name: 'Janet' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    // The cached user is merged, not replaced: still known to have a password
+    expect(screen.getByRole('heading', { name: 'Change password' })).toBeInTheDocument();
   });
 
   it('does not allow an empty name', async () => {

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authKeys } from '@/features/auth/hooks';
+import type { User } from '@/features/auth/types';
 import {
   changePassword,
   deleteAccount,
@@ -18,8 +19,12 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: updateProfile,
-    // The header shows the first name: update the current user right away
-    onSuccess: (user) => queryClient.setQueryData(authKeys.me, user),
+    // The header shows the first name: update the current user right away. Merged, not
+    // replaced: the response only has the profile fields (e.g. no has_password)
+    onSuccess: (user) =>
+      queryClient.setQueryData<User | null>(authKeys.me, (current) =>
+        current ? { ...current, ...user } : current
+      ),
   });
 }
 
