@@ -56,6 +56,13 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   MAIL_FROM: z.string().default('Ecommerce <no-reply@example.com>'),
 
+  // Sign in with Google / GitHub. A provider is only offered when both values are set.
+  // Redirect URI to register at the provider: <APP_URL>/api/auth/oauth/<provider>/callback
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+
   // Pricing. Amounts in cents; product prices include VAT (EU gross prices)
   VAT_RATE_PERCENT: z.coerce.number().int().min(0).max(100).default(19),
   SHIPPING_FEE_CENTS: z.coerce.number().int().min(0).default(499),
@@ -85,6 +92,9 @@ export const parseEnv = (rawEnv) => {
   const env = result.data;
   const stripTrailingSlash = (url) => url.replace(/\/+$/, '');
   const appUrl = stripTrailingSlash(env.APP_URL);
+  // null = provider not configured (no login button for it)
+  const oauthClient = (clientId, clientSecret) =>
+    clientId && clientSecret ? { clientId, clientSecret } : null;
 
   return {
     port: env.PORT,
@@ -120,6 +130,10 @@ export const parseEnv = (rawEnv) => {
         user: env.SMTP_USER,
         password: env.SMTP_PASSWORD,
       },
+    },
+    oauth: {
+      google: oauthClient(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET),
+      github: oauthClient(env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET),
     },
     pricing: {
       vatRatePercent: env.VAT_RATE_PERCENT,

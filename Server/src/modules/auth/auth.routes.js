@@ -21,6 +21,12 @@ router.post('/refresh', validate(refreshTokenBodySchema), authController.refresh
 // No authenticate: logging out must also work with an expired access token
 router.post('/logout', validate(refreshTokenBodySchema), authController.logout);
 
+// Sign in with Google / GitHub (browser navigations, not fetch: they end in redirects).
+// "providers" is registered first, so it is never taken for a provider name.
+router.get('/oauth/providers', authController.oauthProviders);
+router.get('/oauth/:provider', authLimiter, authController.oauthStart);
+router.get('/oauth/:provider/callback', authLimiter, authController.oauthCallback);
+
 // Session management (own sessions only)
 router.post('/logout-all', authenticate, authController.logoutAll);
 router.get('/sessions', authenticate, authController.listSessions);

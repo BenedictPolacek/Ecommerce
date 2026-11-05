@@ -2,6 +2,15 @@ import { catchAsync } from '../../utils/catchAsync.js';
 import { authService } from './auth.service.js';
 import { config } from '../../config/env.js';
 import { accessTokenTtlMs, refreshTokenTtlMs } from './tokens.js';
+import { OAuthSignInError } from './oauth/oauth-error.js';
+import {
+  authorizationUrl,
+  enabledProviders,
+  fetchProfile,
+  isProviderEnabled,
+  newLoginAttempt,
+} from './oauth/providers.js';
+import { AppError } from '../../utils/AppError.js';
 
 // The refresh token is only needed by /api/auth/* (refresh, logout), so the browser
 // does not send it with every other request
@@ -51,6 +60,35 @@ const accessTokenFrom = (req) => {
 };
 
 const clientInfo = (req) => ({ userAgent: req.get('user-agent') });
+
+// ─── Sign in with Google / GitHub ────────────────────────────────────────────
+
+// state, PKCE verifier and nonce of the running login attempt, only sent to the callback
+const OAUTH_COOKIE = 'oauth_attempt';
+const OAUTH_COOKIE_PATH = '/api/auth/oauth';
+
+const oauthCookieOptions = () => ({
+  httpOnly: true,
+  secure: config.isProduction,
+  // lax, not strict: the callback is a navigation coming from the provider's site, and a
+  // strict cookie would not be sent with it
+  sameSite: 'lax',
+  path: OAUTH_COOKIE_PATH,
+});
+
+/** Only paths inside the app (like safeRedirect in the client): no open redirect */
+const safeRedirectPath = (value) =>
+  typeof value === 'string' &&
+  value.startsWith('/') &&
+  !value.startsWith('//') &&
+  // Browsers treat "/\evil.com" like "//evil.com"
+  !value.startsWith('/\\') &&
+  value.length <= 500
+    ? value
+    : '/';
+
+const oauthFailed = (res, code) =>
+  res.redirect(302, `${config.appUrl}/login?oauth_error=${encodeURIComponent(code)}`);
 
 export const authController = {
   /**
@@ -188,6 +226,68 @@ export const authController = {
       success: true,
       message: 'Password has been reset. Please log in with your new password.',
     });
+  }),
+
+  /**
+   * Which sign-in providers are configured (the client shows a button for each)
+   * GET /api/auth/oauth/providers
+   */
+  oauthProviders: (req, res) => {
+    res.status(200).json({ success: true, data: { providers: enabledProviders() } });
+  },
+
+  /**
+   * Starts the sign-in: remembers the attempt in a cookie and sends the browser to the provider
+   * GET /api/auth/oauth/:provider?redirect=/cart
+   */
+  oauthStart: catchAsync(async (req, res) => {
+    const { provider } = req.params;
+    if (!isProviderEnabled(provider)) {
+      throw new AppError('Unknown or disabled sign-in provider', 404);
+    }
+
+    const attempt = {
+      ...newLoginAttempt(provider),
+      redirect: safeRedirectPath(req.query.redirect),
+    };
+    const url = await authorizationUrl(attempt);
+    // An object is stored as JSON ("j:" prefix), cookie-parser turns it back into one
+    res.cookie(OAUTH_COOKIE, attempt, { ...oauthCookieOptions(), maxAge: 10 * 60 * 1000 });
+    res.redirect(302, url.href);
+  }),
+
+  /**
+   * The provider sends the browser back here with ?code=&state= (or ?error=).
+   * On success: session cookies and a redirect into the app; otherwise to /login?oauth_error=
+   * GET /api/auth/oauth/:provider/callback
+   */
+  oauthCallback: catchAsync(async (req, res) => {
+    const { provider } = req.params;
+    const attempt = req.cookies?.[OAUTH_COOKIE];
+    // Single use: whatever happens, the attempt is over
+    res.clearCookie(OAUTH_COOKIE, oauthCookieOptions());
+
+    if (req.query.error) {
+      return oauthFailed(res, req.query.error === 'access_denied' ? 'cancelled' : 'failed');
+    }
+    // No cookie: expired, or the callback was not started in this browser (login CSRF)
+    if (!isProviderEnabled(provider) || attempt?.provider !== provider) {
+      return oauthFailed(res, 'failed');
+    }
+
+    try {
+      // The full URL with code and state; openid-client checks state, PKCE and nonce
+      const callbackUrl = new URL(req.originalUrl, config.appUrl);
+      const profile = await fetchProfile(callbackUrl, attempt);
+      const result = await authService.oauthSignIn(provider, profile, clientInfo(req));
+      setAuthCookies(res, result);
+      return res.redirect(302, `${config.appUrl}${safeRedirectPath(attempt.redirect)}`);
+    } catch (error) {
+      if (error instanceof OAuthSignInError) return oauthFailed(res, error.code);
+      // Provider errors (wrong state, invalid code, network): logged, the user just sees "failed"
+      console.warn(`[OAuth ${provider}] sign-in failed: ${error.message}`);
+      return oauthFailed(res, 'failed');
+    }
   }),
 };
 
