@@ -30,6 +30,33 @@ describe('Seed', () => {
     expect(res.body.data.user.role).toBe('admin');
   });
 
+  it('gives every product one Unsplash photo with an alt text', async () => {
+    await seed();
+
+    const { rows } = await query(
+      `SELECT p.sku, i.url, i.alt_text FROM products p
+       LEFT JOIN product_images i ON i.product_id = p.id`
+    );
+    expect(rows).toHaveLength(products.length);
+    for (const row of rows) {
+      // Free Unsplash license only (plus.unsplash.com would be the paid Unsplash+)
+      expect(row.url).toMatch(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?/);
+      expect(row.alt_text.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('keeps hidden products out of the shop', async () => {
+    await seed();
+    const hidden = products.filter((product) => product.is_active === false);
+
+    const res = await api().get('/api/products').query({ limit: 100 });
+
+    expect(hidden.length).toBeGreaterThan(0);
+    const listed = res.body.data.products.map((product) => product.sku);
+    expect(listed).toHaveLength(products.length - hidden.length);
+    for (const product of hidden) expect(listed).not.toContain(product.sku);
+  });
+
   it('is idempotent: a second run inserts nothing', async () => {
     await seed();
     const second = await seed();

@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import pool from '../../config/db.js';
 import { config } from '../../config/env.js';
 import { slugify } from '../../utils/slug.js';
-import { categories, products } from './data.js';
+import { categories, products, unsplashUrl } from './data.js';
 
 /**
  * Inserts sample categories, products and an admin user in one transaction.
@@ -31,8 +31,9 @@ export async function seed() {
     for (const product of products) {
       // Conflicts on sku or slug both mean "already seeded"
       const { rows } = await client.query(
-        `INSERT INTO products (category_id, name, slug, sku, description, price_cents, stock_quantity)
-         VALUES ((SELECT id FROM categories WHERE slug = $1), $2, $3, $4, $5, $6, $7)
+        `INSERT INTO products
+           (category_id, name, slug, sku, description, price_cents, stock_quantity, is_active)
+         VALUES ((SELECT id FROM categories WHERE slug = $1), $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT DO NOTHING
          RETURNING id`,
         [
@@ -43,6 +44,7 @@ export async function seed() {
           product.description,
           product.price_cents,
           product.stock_quantity,
+          product.is_active ?? true,
         ]
       );
       if (rows.length === 0) continue;
@@ -57,14 +59,10 @@ export async function seed() {
         );
       }
 
-      // Placeholder image service, stands in for a real CDN
+      // Unsplash photo (see data.js); the alt text describes it for screen readers
       await client.query(
         `INSERT INTO product_images (product_id, url, alt_text, sort_order) VALUES ($1, $2, $3, 0)`,
-        [
-          rows[0].id,
-          `https://placehold.co/600x600?text=${encodeURIComponent(product.name)}`,
-          product.name,
-        ]
+        [rows[0].id, unsplashUrl(product.photo.id), product.photo.alt]
       );
     }
 
