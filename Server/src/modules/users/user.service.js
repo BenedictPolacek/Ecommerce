@@ -7,6 +7,12 @@ import { withTransaction } from '../../utils/transaction.js';
 import { OPEN_ORDER_STATUSES } from '../orders/order-status.js';
 import { userRepository } from './user.repository.js';
 
+export const noPasswordYet = () =>
+  new AppError(
+    'Your account has no password yet. Use "Forgot password" to get a link and set one.',
+    400
+  );
+
 /**
  * Deletes a user (GDPR, Art. 17). With orders or audit entries the row is anonymized,
  * because invoices must be kept (§ 147 AO); otherwise it is really deleted.
@@ -103,10 +109,12 @@ export const userService = {
    * unless they are the last one.
    */
   async deleteOwnAccount(userId, { password }) {
-    const passwordHash = await userRepository.findPasswordHashById(userId);
-    if (!passwordHash) throw new AppError('User not found', 404);
+    const account = await userRepository.findPasswordHashById(userId);
+    if (!account) throw new AppError('User not found', 404);
+    // Google/GitHub-only accounts confirm with a password too: they set one via email first
+    if (!account.password_hash) throw noPasswordYet();
     // 400, not 401: the user is logged in, only the entered password is wrong
-    if (!(await bcrypt.compare(password, passwordHash))) {
+    if (!(await bcrypt.compare(password, account.password_hash))) {
       throw new AppError('Password is incorrect', 400);
     }
 

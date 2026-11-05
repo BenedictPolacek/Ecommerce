@@ -15,15 +15,17 @@ export const userRepository = {
   },
 
   /**
-   * Find user by ID (excludes password_hash)
+   * Find user by ID (excludes password_hash). has_password is false for accounts that
+   * only sign in with Google/GitHub.
    */
-  async findById(id) {
+  async findById(id, client = pool) {
     const query = `
-      SELECT id, email, first_name, last_name, role, email_verified_at, created_at, updated_at
+      SELECT id, email, first_name, last_name, role, email_verified_at, created_at, updated_at,
+             (password_hash IS NOT NULL) AS has_password
       FROM users
       WHERE id = $1 AND deleted_at IS NULL
     `;
-    const result = await pool.query(query, [id]);
+    const result = await client.query(query, [id]);
     return result.rows[0] || null;
   },
 
@@ -122,14 +124,24 @@ export const userRepository = {
   },
 
   /**
-   * Only for checking the current password (findById never returns the hash)
+   * Only for checking the current password (findById never returns the hash).
+   * null = no such user; { password_hash: null } = account without a password.
    */
   async findPasswordHashById(id) {
     const result = await pool.query(
       'SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL',
       [id]
     );
-    return result.rows[0]?.password_hash ?? null;
+    return result.rows[0] ?? null;
+  },
+
+  /**
+   * Removes the password: the account can then only be used via a linked provider
+   * (or after setting a new password with the reset link)
+   * @param {import('pg').PoolClient} client - Transaction client
+   */
+  async clearPassword(client, id) {
+    await client.query('UPDATE users SET password_hash = NULL WHERE id = $1', [id]);
   },
 
   /**
@@ -222,7 +234,7 @@ export const userRepository = {
    * @param {import('pg').PoolClient} client - Transaction client
    */
   async deletePersonalData(client, id) {
-    for (const table of ['addresses', 'carts', 'sessions', 'user_tokens']) {
+    for (const table of ['addresses', 'carts', 'sessions', 'user_tokens', 'user_identities']) {
       // Table names come from the fixed list above, never from user input
       await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [id]);
     }

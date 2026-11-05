@@ -6,7 +6,10 @@ import { passwordChangedMail } from '../../mail/templates.js';
 import { AppError } from '../../utils/AppError.js';
 import { withTransaction } from '../../utils/transaction.js';
 import { userRepository } from '../users/user.repository.js';
+import { noPasswordYet } from '../users/user.service.js';
 import { prepareTokenMail, recentlySent } from './account-emails.js';
+import { identityRepository } from './identity.repository.js';
+import { OAuthSignInError } from './oauth/oauth-error.js';
 import { sessionRepository } from './session.repository.js';
 import { userTokenRepository } from './user-token.repository.js';
 import { generateToken, hashToken, refreshTokenTtlMs, signAccessToken } from './tokens.js';
@@ -75,7 +78,7 @@ export const authService = {
 
       const tokens = await startSession(client, user, userAgent);
       const verificationMail = await prepareTokenMail(user, 'email_verification', client);
-      return { user, ...tokens, verificationMail };
+      return { user: { ...user, has_password: true }, ...tokens, verificationMail };
     });
 
     // Only after COMMIT: a rolled-back registration must not send a link
@@ -87,9 +90,10 @@ export const authService = {
    * Authenticate user credentials and start a new session
    */
   async login({ email, password }, { userAgent } = {}) {
-    // 1. Find user by email
+    // 1. Find user by email. Accounts without a password (Google/GitHub only) get the same
+    // answer as a wrong password, so the error does not reveal how someone signs in.
     const user = await userRepository.findByEmail(email);
-    if (!user) {
+    if (!user?.password_hash) {
       throw new AppError('Invalid email or password', 401);
     }
 
@@ -109,6 +113,7 @@ export const authService = {
       email_verified_at: user.email_verified_at,
       created_at: user.created_at,
       updated_at: user.updated_at,
+      has_password: true,
     };
 
     // 4. Housekeeping instead of a cron job: drop this user's dead sessions
@@ -116,6 +121,69 @@ export const authService = {
 
     const tokens = await withTransaction((client) => startSession(client, safeUser, userAgent));
     return { user: safeUser, ...tokens };
+  },
+
+  /**
+   * Sign in with Google/GitHub after the provider confirmed who the user is.
+   * 1. Known provider account: log in.
+   * 2. Same email as an existing account: link it (only with a verified email, so nobody
+   *    takes over an account with an address they do not own).
+   * 3. Otherwise: create an account without a password (email already verified).
+   */
+  async oauthSignIn(provider, profile, { userAgent } = {}) {
+    if (!profile.providerUserId || !profile.email || !profile.emailVerified) {
+      throw new OAuthSignInError('email_unverified');
+    }
+    const email = profile.email.toLowerCase().trim();
+
+    try {
+      return await withTransaction(async (client) => {
+        let user = await identityRepository.findUser(client, provider, profile.providerUserId);
+
+        if (user) {
+          await identityRepository.touch(client, provider, profile.providerUserId);
+        } else {
+          user = await userRepository.findByEmail(email);
+          if (user && !user.email_verified_at) {
+            // Pre-account takeover: someone may have registered this email without owning
+            // it and still know the password. The provider proved who owns the mailbox,
+            // so the unproven password and its sessions are removed.
+            await userRepository.clearPassword(client, user.id);
+            await sessionRepository.revokeAllForUser(user.id, 'account_linked', { client });
+          }
+          if (!user) {
+            const fallbackName = email.split('@')[0];
+            user = await userRepository.create(
+              {
+                email,
+                password_hash: null,
+                first_name: (profile.firstName?.trim() || fallbackName).slice(0, 100),
+                last_name: (profile.lastName?.trim() ?? '').slice(0, 100),
+              },
+              client
+            );
+            await client.query('INSERT INTO carts (user_id) VALUES ($1)', [user.id]);
+          }
+          // The provider verified the address
+          await userRepository.markEmailVerified(user.id, client);
+          await identityRepository.create(client, {
+            userId: user.id,
+            provider,
+            providerUserId: profile.providerUserId,
+            email,
+          });
+        }
+
+        // Fresh row: email_verified_at and has_password may have just changed
+        const fresh = await userRepository.findById(user.id, client);
+        const tokens = await startSession(client, fresh, userAgent);
+        return { user: fresh, ...tokens };
+      });
+    } catch (error) {
+      // 23505: the account already has another account of this provider linked
+      if (error.code === '23505') throw new OAuthSignInError('already_linked');
+      throw error;
+    }
   },
 
   /**
@@ -284,10 +352,11 @@ export const authService = {
    * alone cannot lock the owner out. Other devices are logged out, this one stays.
    */
   async changePassword({ userId, sessionId }, { currentPassword, newPassword }) {
-    const currentHash = await userRepository.findPasswordHashById(userId);
-    if (!currentHash) throw new AppError('User not found', 404);
+    const account = await userRepository.findPasswordHashById(userId);
+    if (!account) throw new AppError('User not found', 404);
+    if (!account.password_hash) throw noPasswordYet();
     // 400, not 401: the user is logged in, only the entered password is wrong
-    if (!(await bcrypt.compare(currentPassword, currentHash))) {
+    if (!(await bcrypt.compare(currentPassword, account.password_hash))) {
       throw new AppError('Current password is incorrect', 400);
     }
 

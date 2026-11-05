@@ -190,6 +190,11 @@ export const swaggerSpec = {
           },
           created_at: { type: 'string', format: 'date-time' },
           updated_at: { type: 'string', format: 'date-time' },
+          has_password: {
+            type: 'boolean',
+            description:
+              'false for accounts that only sign in with Google/GitHub; they set a password via "forgot password"',
+          },
         },
       },
       RegisterRequest: {
@@ -1032,6 +1037,90 @@ export const swaggerSpec = {
               'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
             },
           },
+        },
+      },
+    },
+    '/auth/oauth/providers': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Configured sign-in providers',
+        description:
+          'Providers with client id and secret in the environment. The frontend shows a "Continue with ..." button for each.',
+        responses: {
+          200: {
+            description: 'Provider names',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        providers: {
+                          type: 'array',
+                          items: { type: 'string', enum: ['google', 'github'] },
+                          example: ['google', 'github'],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/auth/oauth/{provider}': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Start signing in with Google or GitHub (browser navigation)',
+        description:
+          'Open this URL in the browser (a link, not fetch). Stores state, PKCE verifier and nonce in the httpOnly cookie `oauth_attempt` (SameSite=Lax, 10 minutes, path /api/auth/oauth) and redirects to the provider. Register `<APP_URL>/api/auth/oauth/<provider>/callback` as redirect URI at the provider.',
+        parameters: [
+          {
+            name: 'provider',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', enum: ['google', 'github'] },
+          },
+          {
+            name: 'redirect',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '/cart' },
+            description: 'Path inside the app to return to (other values become /)',
+          },
+        ],
+        responses: {
+          302: { description: 'Redirect to the provider login page' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
+        },
+      },
+    },
+    '/auth/oauth/{provider}/callback': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Return from the provider (called by the browser, not by clients)',
+        description:
+          'Checks state, PKCE and (Google) nonce, then signs in: a known provider account logs in; an account with the same email is linked if the provider verified the email (an unverified shop account loses its password and sessions first: pre-account-takeover protection); otherwise a new account without password is created. Sets the auth cookies and redirects to `<APP_URL><redirect>`. Errors redirect to `<APP_URL>/login?oauth_error=<code>` with code `cancelled`, `failed`, `email_unverified` or `already_linked`.',
+        parameters: [
+          {
+            name: 'provider',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', enum: ['google', 'github'] },
+          },
+          { name: 'code', in: 'query', schema: { type: 'string' } },
+          { name: 'state', in: 'query', schema: { type: 'string' } },
+          { name: 'error', in: 'query', schema: { type: 'string', example: 'access_denied' } },
+        ],
+        responses: {
+          302: { description: 'Redirect into the app (signed in) or to /login?oauth_error=' },
+          429: { $ref: '#/components/responses/TooManyRequestsError' },
         },
       },
     },
