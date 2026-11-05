@@ -2,6 +2,7 @@ import { catchAsync } from '../../utils/catchAsync.js';
 import { clearAuthCookies } from '../auth/auth.controller.js';
 import { authService } from '../auth/auth.service.js';
 import { userService } from './user.service.js';
+import { userListQuerySchema } from './user.validation.js';
 
 export const userController = {
   /**
@@ -55,6 +56,25 @@ export const userController = {
       success: true,
       message: 'Your account has been deleted.',
     });
+  }),
+
+  /**
+   * Admin: one page of users
+   * GET /api/users?search=&role=&page=&limit=
+   */
+  listUsers: catchAsync(async (req, res) => {
+    const query = userListQuerySchema.parse(req.query);
+    const result = await userService.listUsers(query);
+    res.status(200).json({ success: true, data: result });
+  }),
+
+  /**
+   * Admin: one user with order figures
+   * GET /api/users/:id
+   */
+  getUser: catchAsync(async (req, res) => {
+    const user = await userService.getUserForAdmin(req.idParam);
+    res.status(200).json({ success: true, data: { user } });
   }),
 
   /**

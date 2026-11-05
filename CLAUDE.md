@@ -89,4 +89,5 @@ Conventions:
 - Multi-step writes (register, checkout) use a transaction: `pool.connect()` → `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Products are soft-deleted (`is_active = false`).
 - Orders for admins (`GET /orders/all`, `GET /orders/:id`) include `customer` (`orderRepository.findCustomer`, also for anonymized users: `userRepository.findById` skips deleted users).
+- Admin user support: `GET /users` (`?search=` email or full name, `?role=`, paginated, with `order_count`; deleted users left out), `GET /users/:id` (with `stats`: `order_count`, `spent_cents` = paid/processing/shipped/delivered only, `last_order_at`) and `GET /orders/all?user_id=`. No role changes via the API (admins come from the seed/DB)
 - Users (GDPR): really deleted without orders/audit rows, otherwise anonymized (`deleted_at`, fake email, CHECK `chk_users_deleted_anonymized`); `userRepository.findById`/`findByEmail` never return deleted users.

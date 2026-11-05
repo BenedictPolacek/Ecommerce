@@ -18,6 +18,10 @@ router.patch('/me', validate(updateProfileSchema), userController.updateMe);
 router.patch('/me/password', validate(changePasswordSchema), userController.changePassword);
 router.delete('/me', validate(deleteAccountSchema), userController.deleteMe);
 
+// Admin: customer support. Registered after /me, so "me" is never taken for an id
+router.get('/', authorize('admin'), userController.listUsers);
+router.get('/:id', authorize('admin'), validateIdParam, userController.getUser);
+
 // Admin: delete a customer (e.g. a deletion request by email or phone)
 router.delete('/:id', authorize('admin'), validateIdParam, userController.deleteUser);
 

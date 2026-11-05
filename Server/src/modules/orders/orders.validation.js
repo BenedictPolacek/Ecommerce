@@ -58,6 +58,8 @@ export const adminOrderListQuerySchema = orderListQuerySchema.extend({
     .optional()
     // "?search=" (empty field in a search form) means no search
     .transform((value) => value || undefined),
+  // Orders of one customer (customer detail page)
+  user_id: z.uuid('user_id must be a valid UUID').optional(),
 });
 
 export const orderIdParamSchema = z.object({

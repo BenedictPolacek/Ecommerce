@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { sendMailInBackground } from '../../mail/mailer.js';
 import { accountDeletedMail } from '../../mail/templates.js';
 import { AppError } from '../../utils/AppError.js';
+import { paginationMeta, toOffset } from '../../utils/pagination.js';
 import { withTransaction } from '../../utils/transaction.js';
 import { OPEN_ORDER_STATUSES } from '../orders/order-status.js';
 import { userRepository } from './user.repository.js';
@@ -58,6 +59,31 @@ export const userService = {
       throw new AppError('User not found', 404);
     }
     return user;
+  },
+
+  /**
+   * Admin: one page of users (search by email or name, optionally one role)
+   */
+  async listUsers({ search, role, page, limit }) {
+    const { users, total } = await userRepository.findPage({
+      search,
+      role,
+      limit,
+      offset: toOffset({ page, limit }),
+    });
+    return { users, pagination: paginationMeta({ page, limit }, total) };
+  },
+
+  /**
+   * Admin: one user with their order figures (deleted users are not found)
+   */
+  async getUserForAdmin(userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    const stats = await userRepository.getOrderStats(userId);
+    return { ...user, stats };
   },
 
   /**
