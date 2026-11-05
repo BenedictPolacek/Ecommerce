@@ -6,7 +6,7 @@
  * - On 401 it refreshes the session once and retries the request.
  */
 
-const API_BASE = '/api';
+export const API_BASE = '/api';
 
 // Auth endpoints never trigger a refresh: a 401 there is the real answer
 const NO_REFRESH_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];

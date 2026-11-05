@@ -3,8 +3,9 @@ import { api } from '@/lib/api-client';
 import type { ProfileInput } from './schemas';
 import type { Session } from './types';
 
+/** The response has the profile fields only, without has_password */
 export const updateProfile = (input: ProfileInput) =>
-  api.patch<{ user: User }>('/users/me', input).then(({ user }) => user);
+  api.patch<{ user: Omit<User, 'has_password'> }>('/users/me', input).then(({ user }) => user);
 
 /** Ends all other sessions of the user; this device stays logged in */
 export const changePassword = (input: { currentPassword: string; newPassword: string }) =>

@@ -14,7 +14,7 @@ type Handler = MockResponse | (() => MockResponse | Promise<MockResponse>);
  * A key without query string also matches requests with one ("GET /products" matches
  * "/products?page=2"); an exact key with query string wins.
  * The shop page (home) and the cart badge are loaded by many flows, so an empty shop and an
- * empty cart are mocked by default; pass the same keys to override them.
+ * empty cart (and no Google/GitHub sign-in) are mocked by default; pass the same keys to override them.
  * Unknown requests fail loudly so tests never hit a real server.
  */
 export function mockApi(handlers: Record<string, Handler>) {
@@ -63,6 +63,8 @@ export const emptyCart: Cart = {
 };
 
 const defaults: Record<string, Handler> = {
+  // Login and register ask for the sign-in providers; none by default (no buttons)
+  'GET /auth/oauth/providers': ok({ providers: [] }),
   'GET /cart': ok({ cart: emptyCart }),
   'GET /categories': ok({ categories: [] }),
   'GET /products': ok({

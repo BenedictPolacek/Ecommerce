@@ -10,4 +10,9 @@ export interface User {
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
+  /** false: signs in only with Google/GitHub and can set a password via the reset email */
+  has_password: boolean;
 }
+
+/** Sign-in providers the server has configured */
+export type OAuthProvider = 'google' | 'github';

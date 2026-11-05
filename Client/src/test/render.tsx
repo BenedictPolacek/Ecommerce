@@ -31,5 +31,6 @@ export const buildUser = (overrides: Partial<User> = {}): User => ({
   email_verified_at: '2026-10-01T10:00:00.000Z',
   created_at: '2026-10-01T10:00:00.000Z',
   updated_at: '2026-10-01T10:00:00.000Z',
+  has_password: true,
   ...overrides,
 });

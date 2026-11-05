@@ -1,6 +1,6 @@
-import { api, ApiError } from '@/lib/api-client';
+import { API_BASE, api, ApiError } from '@/lib/api-client';
 import type { LoginInput, RegisterInput } from './schemas';
-import type { User } from './types';
+import type { OAuthProvider, User } from './types';
 
 // The tokens in the response body are for non-browser clients; the browser uses the cookies
 interface AuthResponse {
@@ -32,3 +32,13 @@ export const forgotPassword = (email: string) => api.post<void>('/auth/forgot-pa
 
 export const resetPassword = (input: { token: string; password: string }) =>
   api.post<void>('/auth/reset-password', input);
+
+export const getOAuthProviders = async () =>
+  (await api.get<{ providers: OAuthProvider[] }>('/auth/oauth/providers')).providers;
+
+/**
+ * Sign-in with Google/GitHub is a full page navigation (a link, not fetch): the browser
+ * goes to the provider and comes back via the API callback, which sets the cookies.
+ */
+export const oauthStartUrl = (provider: OAuthProvider, redirect: string) =>
+  `${API_BASE}/auth/oauth/${provider}?${new URLSearchParams({ redirect })}`;
