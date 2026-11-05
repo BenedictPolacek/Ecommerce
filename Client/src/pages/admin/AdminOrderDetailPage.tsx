@@ -11,6 +11,7 @@ import { useAdminOrder } from '@/features/admin-orders/hooks';
 import { OrderItems } from '@/features/orders/components/OrderItems';
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge';
 import { paidCents } from '@/features/orders/status';
+import { isAnonymized } from '@/features/admin-customers/api';
 import { ApiError } from '@/lib/api-client';
 import { formatDateTime, formatPrice } from '@/lib/format';
 
@@ -106,9 +107,19 @@ export function AdminOrderDetailPage() {
             <h3 id="customer-title" className="text-lg font-semibold">
               Customer
             </h3>
-            <span>
-              {customer.first_name} {customer.last_name}
-            </span>
+            {/* Deleted customers are anonymized: there is no customer page any more */}
+            {isAnonymized(customer) ? (
+              <span>
+                {customer.first_name} {customer.last_name}
+              </span>
+            ) : (
+              <Link
+                to={`/admin/customers/${customer.id}`}
+                className="font-medium underline-offset-4 hover:underline"
+              >
+                {customer.first_name} {customer.last_name}
+              </Link>
+            )}
             <a href={`mailto:${customer.email}`} className="underline-offset-4 hover:underline">
               {customer.email}
             </a>

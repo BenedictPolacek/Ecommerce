@@ -28,6 +28,8 @@ export interface AdminOrderList {
 export interface AdminOrderListParams extends OrderListParams {
   /** Part of the order number or the customer email */
   search?: string;
+  /** Only the orders of this customer */
+  userId?: string;
 }
 
 /** Admins also see who changed the status and the internal note */

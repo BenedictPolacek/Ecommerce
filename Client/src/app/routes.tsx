@@ -163,6 +163,20 @@ export const routes: RouteObject[] = [
                     Component: m.AdminCategoriesPage,
                   })),
               },
+              {
+                path: 'customers',
+                lazy: () =>
+                  import('@/pages/admin/AdminCustomersPage').then((m) => ({
+                    Component: m.AdminCustomersPage,
+                  })),
+              },
+              {
+                path: 'customers/:userId',
+                lazy: () =>
+                  import('@/pages/admin/AdminCustomerDetailPage').then((m) => ({
+                    Component: m.AdminCustomerDetailPage,
+                  })),
+              },
             ],
           },
         ],
