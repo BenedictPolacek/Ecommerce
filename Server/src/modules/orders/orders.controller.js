@@ -31,7 +31,7 @@ export const ordersController = {
 
   /**
    * One page of all orders in the system (Admin only)
-   * GET /api/orders/all?status=&search=&page=&limit=
+   * GET /api/orders/all?status=&search=&user_id=&page=&limit=
    */
   listAllOrders: catchAsync(async (req, res) => {
     const query = adminOrderListQuerySchema.parse(req.query);

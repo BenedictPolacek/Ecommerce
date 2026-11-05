@@ -196,8 +196,8 @@ export const orderService = {
   /**
    * One page of all orders in the system (Admin only), with the customer of each order
    */
-  async getAllOrders(query) {
-    return listOrders({ ...query, withCustomer: true });
+  async getAllOrders({ user_id, ...query }) {
+    return listOrders({ ...query, userId: user_id, withCustomer: true });
   },
 
   /**

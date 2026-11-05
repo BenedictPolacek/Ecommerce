@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuery } from '../../utils/pagination.js';
 import { requiredString } from '../../utils/zod.js';
 import { passwordSchema } from '../auth/auth.validation.js';
 
@@ -31,4 +32,22 @@ export const deleteAccountSchema = z
   })
   .prefault({});
 
-export default { updateProfileSchema, changePasswordSchema, deleteAccountSchema };
+// Admin list: search by email or name (part of it is enough), optionally one role
+export const userListQuerySchema = z.object({
+  search: z
+    .string()
+    .trim()
+    .max(100, 'search cannot exceed 100 characters')
+    .optional()
+    // "?search=" (empty field in a search form) means no search
+    .transform((value) => value || undefined),
+  role: z.enum(['customer', 'admin'], { error: 'role must be "customer" or "admin"' }).optional(),
+  ...paginationQuery,
+});
+
+export default {
+  updateProfileSchema,
+  changePasswordSchema,
+  deleteAccountSchema,
+  userListQuerySchema,
+};

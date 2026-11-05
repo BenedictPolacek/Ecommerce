@@ -507,6 +507,38 @@ export const swaggerSpec = {
           },
         },
       },
+      AdminUserSummary: {
+        allOf: [
+          { $ref: '#/components/schemas/User' },
+          {
+            type: 'object',
+            properties: { order_count: { type: 'integer', example: 3 } },
+          },
+        ],
+      },
+      AdminUser: {
+        allOf: [
+          { $ref: '#/components/schemas/User' },
+          {
+            type: 'object',
+            properties: {
+              stats: {
+                type: 'object',
+                properties: {
+                  order_count: { type: 'integer', example: 3 },
+                  spent_cents: {
+                    type: 'integer',
+                    example: 21497,
+                    description:
+                      'Sum of paid orders (paid, processing, shipped, delivered); pending, cancelled and refunded orders do not count',
+                  },
+                  last_order_at: { type: 'string', format: 'date-time', nullable: true },
+                },
+              },
+            },
+          },
+        ],
+      },
       Pagination: {
         type: 'object',
         properties: {
@@ -1324,7 +1356,106 @@ export const swaggerSpec = {
         },
       },
     },
+    '/users': {
+      get: {
+        tags: ['Users'],
+        summary: 'List users (admin only, paginated, newest first)',
+        description:
+          'Active accounts with their number of orders. Deleted (anonymized) users are left out.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', maxLength: 100 },
+            description: 'Part of the email or the full name (case-insensitive)',
+          },
+          {
+            name: 'role',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['customer', 'admin'] },
+            description: 'Only this role; default: every role',
+          },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', default: 20, maximum: 100 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'One page of users',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        users: {
+                          type: 'array',
+                          items: { $ref: '#/components/schemas/AdminUserSummary' },
+                        },
+                        pagination: { $ref: '#/components/schemas/Pagination' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
     '/users/{id}': {
+      get: {
+        tags: ['Users'],
+        summary: 'Get a user with order figures (admin only)',
+        description:
+          'Deleted users return 404. Their orders are listed with GET /orders/all?user_id=.',
+        security: [{ BearerAuth: [] }, { CookieAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'User UUID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'The user',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: { user: { $ref: '#/components/schemas/AdminUser' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/UnauthorizedError' },
+          403: { $ref: '#/components/responses/ForbiddenError' },
+          404: { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
       delete: {
         tags: ['Users'],
         summary: 'Delete a customer account (admin only)',
@@ -2379,6 +2510,13 @@ export const swaggerSpec = {
             required: false,
             schema: { type: 'string', maxLength: 100 },
             description: 'Part of the order number or the customer email (case-insensitive)',
+          },
+          {
+            name: 'user_id',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Only the orders of this customer',
           },
         ],
         responses: {

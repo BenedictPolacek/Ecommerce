@@ -28,6 +28,61 @@ export const userRepository = {
   },
 
   /**
+   * One page of active users for admins, newest first, with their number of orders.
+   * Deleted (anonymized) users are left out: only their orders remain.
+   */
+  async findPage({ search, role, limit, offset }) {
+    const conditions = ['u.deleted_at IS NULL'];
+    const values = [];
+    if (search !== undefined) {
+      // % and _ are wildcards in LIKE: escape them, the search text is matched literally
+      values.push(`%${search.replace(/[\\%_]/g, '\\$&')}%`);
+      const p = `$${values.length}`;
+      // Full name, so "Anna Schm" finds Anna Schmidt
+      conditions.push(`(u.email ILIKE ${p} OR (u.first_name || ' ' || u.last_name) ILIKE ${p})`);
+    }
+    if (role !== undefined) {
+      values.push(role);
+      conditions.push(`u.role = $${values.length}`);
+    }
+    const where = `WHERE ${conditions.join(' AND ')}`;
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM users u ${where}`,
+      values
+    );
+
+    const { rows } = await pool.query(
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.email_verified_at,
+              u.created_at, u.updated_at,
+              (SELECT COUNT(*)::int FROM orders o WHERE o.user_id = u.id) AS order_count
+       FROM users u
+       ${where}
+       ORDER BY u.created_at DESC, u.id DESC -- id as tiebreaker: stable order across pages
+       LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      [...values, limit, offset]
+    );
+
+    return { users: rows, total: countResult.rows[0].total };
+  },
+
+  /**
+   * Order figures of one user. "Spent" only counts orders that were paid and not
+   * cancelled or refunded (pending orders are not money yet).
+   */
+  async getOrderStats(id) {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS order_count,
+              COALESCE(SUM(total_cents) FILTER (WHERE status = ANY($2)), 0)::int AS spent_cents,
+              MAX(created_at) AS last_order_at
+       FROM orders
+       WHERE user_id = $1`,
+      [id, ['paid', 'processing', 'shipped', 'delivered']]
+    );
+    return rows[0];
+  },
+
+  /**
    * Create a new user record
    * @param {Object} userData
    * @param {import('pg').PoolClient} [client] - Optional client for transaction support
