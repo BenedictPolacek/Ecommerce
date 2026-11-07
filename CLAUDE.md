@@ -26,7 +26,8 @@ it is up to you to show me best practices and ways to create this project as rea
 - `npm run lint` / `npm run lint:fix` – ESLint (flat config `eslint.config.js`)
 - `npm run format` / `npm run format:check` – Prettier (`.prettierrc.json`); CI runs lint + format:check
 - `npm run db:migrate` – creates the DB if missing and runs pending migrations (node-pg-migrate, SQL files in `src/db/migrations/`)
-- `npm run db:seed` – idempotent sample data (categories, products, admin from `SEED_ADMIN_*`); refuses in production
+- `npm run db:seed` – idempotent sample data (categories, products, admin from `SEED_ADMIN_*`); refuses in production. Sample shop = women's fashion (`src/db/seeders/data.js`, 17 categories, 82 products): photos from Unsplash only (`images.unsplash.com`, free license; never Unsplash+ `plus.unsplash.com`, never Pinterest or brand photos), each checked to load, alt text written from the actual photo, photographer in `photo.by`
+- `npm run db:reset` – development only: drops the whole local schema, runs all migrations and seeds (refuses in production and with `DATABASE_URL`); needed to switch to new sample data, because the seed never changes existing rows
 - `npm run db:rollback` – reverts the last migration; `npm run db:migration:create <name>` – new SQL migration
 - Schema changes = new migration file, never edit merged migrations
 - API docs: `http://localhost:5000/api/docs` (Swagger)
