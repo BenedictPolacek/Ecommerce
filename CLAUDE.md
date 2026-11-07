@@ -43,6 +43,11 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - Imports use the `@/` alias for `src/`
 - API is always called via the same origin `/api` (auth cookies are `sameSite=strict`), never a different host
 
+## End-to-end tests (run inside `e2e/`)
+- Playwright (Chromium) against the real API, client build and database: `npm test` (`test:ui` for the interactive runner, `report` for the last HTML report), `npm run typecheck`, `npm run format(:check)`. First time: `npx playwright install chromium`
+- `playwright.config.ts` starts its own copy of the app: API on port 5100 with the database `ecommerce_db_e2e` (`db:reset` on every start), client build via `vite preview` on port 3100; dev servers (3000/5000) and the dev database are never touched. Needs Postgres and Mailpit from docker-compose (CI: service containers, job `E2E tests`)
+- Tests in `tests/` cover user journeys, not details (the unit tests do that). Shared values in `support/env.ts` (ports, seeded admin, `newCustomer()` with a unique email per test), emails via Mailpit's API in `support/mailpit.ts` (`waitForMail`, `linkIn`). Select elements by role and label like a user would. Set-up that is not under test (e.g. an order for the admin test) goes through the API with its own request context
+
 ## Architecture (Client/src)
 - `app/` – `App.tsx` (providers), `routes.tsx` (route objects, shared with tests), `query-client.ts`
 - Code splitting: every page except `ShopPage` (landing page) is loaded with the route's `lazy: () => import('@/pages/X').then((m) => ({ Component: m.X }))`; new pages follow this pattern

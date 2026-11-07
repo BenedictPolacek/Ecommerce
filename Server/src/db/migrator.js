@@ -16,7 +16,7 @@ const connection = config.db.connectionString || {
 };
 
 // Hosted databases (DATABASE_URL) are provisioned by the provider, so only create locally
-async function ensureDatabaseExists() {
+export async function ensureDatabaseExists() {
   if (config.db.connectionString) return;
 
   const client = new Client({ ...connection, database: 'postgres' });
