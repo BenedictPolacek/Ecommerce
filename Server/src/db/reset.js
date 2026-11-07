@@ -1,6 +1,6 @@
 import pool from '../config/db.js';
 import { config } from '../config/env.js';
-import { migrate } from './migrator.js';
+import { ensureDatabaseExists, migrate } from './migrator.js';
 import { seed } from './seeders/index.js';
 
 // Usage: npm run db:reset
@@ -18,6 +18,8 @@ async function main() {
     process.exit(1);
   }
 
+  // A brand-new database (e.g. for the end-to-end tests) is created first
+  await ensureDatabaseExists();
   const { rows } = await pool.query('SELECT current_database() AS name');
   console.log(`Resetting database "${rows[0].name}"...`);
 

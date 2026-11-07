@@ -47,6 +47,23 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
+  # End-to-end test tools (Playwright)
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+    groups:
+      all:
+        patterns: ["*"]
+
   # GitHub Actions used in workflows
   - package-ecosystem: github-actions
     directory: /
