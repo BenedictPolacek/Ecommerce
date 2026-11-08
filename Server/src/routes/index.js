@@ -33,15 +33,6 @@ router.get('/docs.json', (req, res) => {
   res.json(swaggerSpec);
 });
 
-// Base API health check
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    message: 'Ecommerce REST API is running',
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // Feature modules
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
