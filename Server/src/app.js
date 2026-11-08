@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env.js';
 import apiRoutes from './routes/index.js';
+import healthRoutes from './routes/health.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
@@ -27,8 +28,14 @@ app.use(
 );
 
 // HTTP request logging
+// Production: standard Apache format without colors (log collectors parse it). Health checks
+// are left out, the platform polls them every few seconds.
 if (config.nodeEnv !== 'test') {
-  app.use(morgan('dev'));
+  app.use(
+    morgan(config.isProduction ? 'combined' : 'dev', {
+      skip: (req) => req.originalUrl.startsWith('/api/health'),
+    })
+  );
 }
 
 // Body & Cookie parsing
@@ -50,6 +57,9 @@ app.get('/', (req, res) => {
     docs: '/api/docs',
   });
 });
+
+// Health checks come before the rate limiter: platforms poll them every few seconds
+app.use('/api/health', healthRoutes);
 
 // Register API routes
 app.use('/api', apiLimiter, apiRoutes);

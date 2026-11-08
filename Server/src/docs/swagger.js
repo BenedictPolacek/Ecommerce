@@ -886,10 +886,11 @@ export const swaggerSpec = {
     '/health': {
       get: {
         tags: ['Health'],
-        summary: 'Service health check',
+        summary: 'Liveness check (the process answers)',
+        description: 'Does not touch the database. Not rate limited.',
         responses: {
           200: {
-            description: 'API is running and healthy',
+            description: 'API is running',
             content: {
               'application/json': {
                 schema: {
@@ -898,6 +899,50 @@ export const swaggerSpec = {
                     status: { type: 'string', example: 'ok' },
                     message: { type: 'string', example: 'Ecommerce REST API is running' },
                     timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/health/ready': {
+      get: {
+        tags: ['Health'],
+        summary: 'Readiness check (the database answers too)',
+        description:
+          'For load balancers and container platforms: send traffic only while this is 200. Not rate limited.',
+        responses: {
+          200: {
+            description: 'Ready',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'ok' },
+                    checks: {
+                      type: 'object',
+                      properties: { database: { type: 'string', example: 'ok' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          503: {
+            description: 'The database is unreachable or slower than 2 seconds',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'unavailable' },
+                    checks: {
+                      type: 'object',
+                      properties: { database: { type: 'string', example: 'unavailable' } },
+                    },
                   },
                 },
               },

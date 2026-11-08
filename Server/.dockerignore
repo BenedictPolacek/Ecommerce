@@ -1,0 +1,9 @@
+# Only what the image needs goes into the build context (smaller, faster, no secrets)
+node_modules
+.env
+.env.*
+tests
+coverage
+*.log
+Dockerfile
+.dockerignore

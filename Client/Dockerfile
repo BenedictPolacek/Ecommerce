@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+
+# Stage 1: build the static files. Node and node_modules stay in this stage only
+FROM node:24-alpine AS build
+
+WORKDIR /app
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci
+
+COPY . .
+# Type checks run in CI; the image only needs the bundle
+RUN npx vite build
+
+# Stage 2: Caddy serves dist/ and forwards /api to the API container (same origin for the
+# sameSite=strict cookies). The final image contains no Node.js and no source code.
+FROM caddy:2-alpine
+
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv
+
+# Unprivileged user; it only needs to write Caddy's own state directories
+RUN addgroup -S web && adduser -S -G web web && chown -R web:web /data /config
+USER web
+
+EXPOSE 8080

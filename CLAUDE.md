@@ -11,6 +11,7 @@ it is up to you to show me best practices and ways to create this project as rea
 
 ## Layout
 - `Server/` – REST API (Node.js, Express 5, PostgreSQL via `pg`, ES modules)
+- `docker-compose.yml` – dev services (Postgres, Mailpit); `docker-compose.prod.yml` – the whole shop from the production images
 - `Client/` – SPA (React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui, React Router 8 data mode, TanStack Query, React Hook Form + Zod, Sonner)
 
 ## Git workflow
@@ -18,7 +19,7 @@ it is up to you to show me best practices and ways to create this project as rea
 - Branch names: `feature/…`, `fix/…`, `docs/…`, `chore/…`. Push the branch, then the user opens/merges the PR on GitHub.
 - Commit messages and PR titles: Conventional Commits (`feat(cart): …`, `fix(orders): …`), see `CONTRIBUTING.md`.
 - After a merge: `git switch main`, `git pull`, delete the merged branch (local + remote).
-- CI: GitHub Actions in `.github/workflows/ci.yml` (Node version from `.nvmrc`): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first. `Client lint` (ESLint, Prettier, `tsc`) and `Client tests` (Vitest + production build) in `Client/`.
+- CI: GitHub Actions in `.github/workflows/ci.yml` (Node version from `.nvmrc`): `Server lint` (ESLint + Prettier check) and `Server tests` jobs in `Server/`; the test job has a Postgres service container and runs migrations first. `Client lint` (ESLint, Prettier, `tsc`) and `Client tests` (Vitest + production build) in `Client/`. `Docker smoke test` builds and starts `docker-compose.prod.yml` and checks it with curl.
 
 ## Server commands (run inside `Server/`)
 - `npm run dev` – start with nodemon (port from `.env`, default 5000)
@@ -49,6 +50,12 @@ Setup: local PostgreSQL, copy `.env.example` to `.env`. Never commit `.env`.
 - Tests in `tests/` cover user journeys, not details (the unit tests do that). Shared values in `support/env.ts` (ports, seeded admin, `newCustomer()` with a unique email per test), emails via Mailpit's API in `support/mailpit.ts` (`waitForMail`, `linkIn`). Select elements by role and label like a user would. Set-up that is not under test (e.g. an order for the admin test) goes through the API with its own request context
 
 - Accessibility: `tests/accessibility.spec.ts` scans every important page (visitor, customer, admin) with axe (`expectNoA11yViolations()` in `support/a11y.ts`: WCAG 2.1 A/AA + best practices, must stay at zero violations); a self-test proves the scanner finds injected problems. Keyboard behavior (skip link) is tested by hand in the same file. New pages get a scan there
+
+## Docker (production images)
+- `Server/Dockerfile`: Node 24 alpine, production dependencies only, runs as user `node`; on start it runs pending migrations, then `exec node src/server.js` (PID 1 gets SIGTERM → graceful shutdown). `HEALTHCHECK` = readiness
+- `Client/Dockerfile`: multi-stage, `vite build` in Node, then Caddy (`Client/Caddyfile`) serves `dist/` as non-root on `:8080` and proxies `/api/*` to `API_UPSTREAM` (default `api:5000`) → same origin for the cookies. SPA fallback to `index.html`; `/assets/*` cached immutable, the rest `no-cache`; security headers incl. CSP for the SPA (the API keeps helmet's). `SITE_ADDRESS` = listen address (a domain makes Caddy fetch HTTPS certificates)
+- `docker-compose.prod.yml` (project `ecommerce-prod`): db + mailpit (UI on 8026) + api + web; only web is published (http://localhost:8080). Needs `JWT_SECRET` in the root `.env` (template `.env.example`; `Server/.env` is for dev only). `docker compose -f docker-compose.prod.yml up --build -d`; sample data: `docker compose -f docker-compose.prod.yml exec -e NODE_ENV=development api node src/db/seed.js`
+- Health: `GET /api/health` = liveness (no DB), `GET /api/health/ready` = readiness (`SELECT 1`, 2 s timeout, 503 without details); both are mounted before the rate limiter and left out of the request log (`src/routes/health.js`)
 
 ## Architecture (Client/src)
 - `app/` – `App.tsx` (providers), `routes.tsx` (route objects, shared with tests), `query-client.ts`

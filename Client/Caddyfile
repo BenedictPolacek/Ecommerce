@@ -1,0 +1,44 @@
+# Web server of the Client image (see Dockerfile). Settings via environment variables:
+#   SITE_ADDRESS  where Caddy listens. Default ":8080" (plain HTTP; TLS ends at the platform).
+#                 A domain like "shop.example.com" makes Caddy fetch HTTPS certificates itself.
+#   API_UPSTREAM  where /api goes. Default "api:5000" (service name in docker compose)
+{
+	# No runtime configuration API inside the container
+	admin off
+}
+
+{$SITE_ADDRESS::8080} {
+	encode zstd gzip
+
+	# Same origin for app and API: the auth cookies are sameSite=strict
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:api:5000}
+	}
+
+	# The SPA. The API sets its own security headers (helmet)
+	handle {
+		root * /srv
+
+		header {
+			X-Content-Type-Options nosniff
+			X-Frame-Options DENY
+			Referrer-Policy strict-origin-when-cross-origin
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			# Scripts only from our own bundle. Inline styles are needed by UI libraries
+			# (toasts); product images may come from any https URL (admin adds them by URL)
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			-Server
+		}
+
+		# Files in /assets have a content hash in their name: cache them forever.
+		# Everything else (index.html) is revalidated, so a deploy is visible at once
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@notAssets not path /assets/*
+		header @notAssets Cache-Control "no-cache"
+
+		# Client-side routes (/products/x, /orders/y) are all served by index.html
+		try_files {path} /index.html
+		file_server
+	}
+}

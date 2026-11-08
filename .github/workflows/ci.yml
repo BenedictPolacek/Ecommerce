@@ -150,6 +150,38 @@ jobs:
       - name: Build
         run: npm run build
 
+  # Builds the production images and starts them together: proves the Dockerfiles, the Caddy
+  # config and the start-up (migrations, health checks) work, not only the code
+  docker:
+    name: Docker smoke test
+    runs-on: ubuntu-latest
+
+    env:
+      JWT_SECRET: ci_docker_secret_at_least_32_characters_long
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # --wait returns once every container is running and the API reports healthy
+      - name: Build and start the production stack
+        run: docker compose -f docker-compose.prod.yml up --build --detach --wait
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          base=http://localhost:8080
+          curl --fail --silent "$base/api/health/ready"
+          curl --fail --silent "$base/api/products" | grep -q '"success":true'
+          curl --fail --silent "$base/" | grep -q '<div id="root">'
+          # Client-side routes get index.html too (SPA fallback)
+          curl --fail --silent "$base/products/any-product" | grep -q '<div id="root">'
+          curl --fail --silent --head "$base/" | grep -qi '^content-security-policy:'
+
+      - name: Show container logs
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs
+
   e2e:
     name: E2E tests
     runs-on: ubuntu-latest
