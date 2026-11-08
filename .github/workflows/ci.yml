@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: jobs that need more ask for it themselves
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Server lint
@@ -258,3 +262,78 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report
           retention-days: 7
+
+  # Builds and scans the images on every run; only pushes to main publish them.
+  # Deliberately plain docker commands: this job holds a token that can write packages, so as
+  # little third-party code as possible runs here (trivy-action was hijacked in March 2026,
+  # CVE-2026-33634). The only action is pinned to a commit, because tags can be moved.
+  images:
+    name: Build, scan and publish images
+    runs-on: ubuntu-latest
+    # Only code that passed everything becomes an image
+    needs: [lint, test, client-lint, client-test, docker, e2e]
+
+    permissions:
+      contents: read
+      packages: write
+
+    # Two quick merges must not overwrite "latest" in the wrong order
+    concurrency:
+      group: images-${{ github.ref }}
+      cancel-in-progress: false
+
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # By digest, which cannot be changed afterwards. Dependabot does not see this line:
+      # update it by hand, with a release that is at least two weeks old
+      TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build images
+        run: |
+          # Registry names must be lowercase
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ecommerce"
+          echo "IMAGE_PREFIX=$prefix" >> "$GITHUB_ENV"
+          for pair in api:Server web:Client; do
+            name="${pair%%:*}"
+            context="${pair##*:}"
+            # The source label links the package to this repository on GitHub
+            docker build --pull \
+              --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --tag "$prefix-$name:$GITHUB_SHA" \
+              --tag "$prefix-$name:latest" \
+              "$context"
+          done
+
+      # Runs before the registry login, on read-only archives: the scanner gets no token, no
+      # environment and no Docker socket. Only critical holes that have a fix block a release
+      - name: Scan images
+        run: |
+          mkdir -p "$RUNNER_TEMP/scan"
+          for name in api web; do
+            docker save "$IMAGE_PREFIX-$name:$GITHUB_SHA" --output "$RUNNER_TEMP/scan/$name.tar"
+            docker run --rm --read-only --tmpfs /tmp --tmpfs /root/.cache \
+              --volume "$RUNNER_TEMP/scan:/scan:ro" \
+              "$TRIVY_IMAGE" image --no-progress --input "/scan/$name.tar" \
+              --severity CRITICAL --ignore-unfixed --exit-code 1
+          done
+
+      # Exactly the scanned images. Both SHA tags first, "latest" last: it never points to
+      # a release that is only half uploaded
+      - name: Publish images
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          for tag in "$GITHUB_SHA" latest; do
+            for name in api web; do
+              docker push "$IMAGE_PREFIX-$name:$tag"
+            done
+          done
