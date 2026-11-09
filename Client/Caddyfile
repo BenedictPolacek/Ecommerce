@@ -1,10 +1,17 @@
 # Web server of the Client image (see Dockerfile). Settings via environment variables:
 #   SITE_ADDRESS  where Caddy listens. Default ":8080" (plain HTTP; TLS ends at the platform).
 #                 A domain like "shop.example.com" makes Caddy fetch HTTPS certificates itself.
-#   API_UPSTREAM  where /api goes. Default "api:5000" (service name in docker compose)
+#   API_UPSTREAM  where /api goes. Default "api:5000" (service name in docker compose),
+#                 or a public URL like "https://ecommerce-api.onrender.com"
 {
 	# No runtime configuration API inside the container
 	admin off
+
+	servers {
+		# Keep the visitor's IP from X-Forwarded-For when the request comes through the
+		# platform's own load balancer; otherwise rate limiting would see only that
+		trusted_proxies static private_ranges
+	}
 }
 
 {$SITE_ADDRESS::8080} {
@@ -12,7 +19,10 @@
 
 	# Same origin for app and API: the auth cookies are sameSite=strict
 	handle /api/* {
-		reverse_proxy {$API_UPSTREAM:api:5000}
+		reverse_proxy {$API_UPSTREAM:api:5000} {
+			# Hosting platforms route by host name: it must be the API's, not the shop's
+			header_up Host {upstream_hostport}
+		}
 	}
 
 	# The SPA. The API sets its own security headers (helmet)

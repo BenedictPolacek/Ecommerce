@@ -306,6 +306,7 @@ jobs:
             docker build --pull \
               --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --build-arg "GIT_SHA=$GITHUB_SHA" \
               --tag "$prefix-$name:$GITHUB_SHA" \
               --tag "$prefix-$name:latest" \
               "$context"
@@ -337,3 +338,60 @@ jobs:
               docker push "$IMAGE_PREFIX-$name:$tag"
             done
           done
+
+  # Continuous deployment: Render starts exactly the images that were just published.
+  # Hooks are secrets (anyone with the URL can deploy). No third-party code runs here.
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 30
+
+    # One deployment at a time, in merge order
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    env:
+      HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+      HOOK_WEB: ${{ secrets.RENDER_DEPLOY_HOOK_WEB }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+
+    steps:
+      - name: Deploy and verify
+        run: |
+          if [ -z "$HOOK_API" ] || [ -z "$HOOK_WEB" ] || [ -z "$PRODUCTION_URL" ]; then
+            echo "::notice::Deployment is not configured yet, skipping."
+            exit 0
+          fi
+
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ecommerce"
+
+          deploy() { # hook, image
+            curl --fail --silent --show-error --get \
+              --data-urlencode "imgURL=$2:$GITHUB_SHA" "$1" > /dev/null
+          }
+
+          # A sleeping free service needs about a minute to wake up, a deploy a few more
+          wait_for() { # url, expected text
+            for _ in $(seq 1 40); do
+              if curl --silent --max-time 20 "$1" | grep -q "$2"; then return 0; fi
+              sleep 15
+            done
+            echo "::error::$1 did not answer with $2"
+            return 1
+          }
+
+          # API first: it runs the migrations, and the old web works with the new API
+          deploy "$HOOK_API" "$prefix-api"
+          wait_for "$PRODUCTION_URL/api/health" "\"version\":\"$GITHUB_SHA\""
+
+          deploy "$HOOK_WEB" "$prefix-web"
+          wait_for "$PRODUCTION_URL/version.txt" "$GITHUB_SHA"
+
+          wait_for "$PRODUCTION_URL/api/health/ready" '"database":"ok"'
