@@ -11,6 +11,8 @@ dotenv.config({ path: envFiles, quiet: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Commit the image was built from (Dockerfile build argument)
+  GIT_SHA: z.string().default('dev'),
   PORT: z.coerce.number().int().positive().default(5000),
 
   DATABASE_URL: z.url().optional(),
@@ -99,6 +101,7 @@ export const parseEnv = (rawEnv) => {
   return {
     port: env.PORT,
     nodeEnv: env.NODE_ENV,
+    version: env.GIT_SHA,
     isProduction: env.NODE_ENV === 'production',
     db: {
       connectionString: env.DATABASE_URL,

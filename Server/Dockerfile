@@ -12,6 +12,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY src ./src
 
+# The commit of this image: GET /api/health reports it, the deployment checks it
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
+
 # The files belong to root and the app runs as the unprivileged "node" user:
 # a compromised process can neither change the code nor act as root
 USER node

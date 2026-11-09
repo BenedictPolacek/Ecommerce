@@ -898,6 +898,7 @@ export const swaggerSpec = {
                   properties: {
                     status: { type: 'string', example: 'ok' },
                     message: { type: 'string', example: 'Ecommerce REST API is running' },
+                    version: { type: 'string', description: 'Commit of the running image' },
                     timestamp: { type: 'string', format: 'date-time' },
                   },
                 },

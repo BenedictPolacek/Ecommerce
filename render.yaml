@@ -1,0 +1,53 @@
+# Render Blueprint: the production services as code. Secrets (sync: false) are entered once
+# in the Render dashboard and never stored here. Deployments come from CI (.github/workflows/ci.yml).
+services:
+  - type: web
+    name: ecommerce-api
+    runtime: image
+    image:
+      url: ghcr.io/benedictpolacek/ecommerce-api:latest
+    plan: free
+    region: frankfurt
+    # Liveness on purpose: the database is proven at start (migrations), and polling
+    # readiness would keep the Neon database awake and use up its free compute hours
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # Public URL of the shop (the ecommerce-web service)
+      - key: APP_URL
+        sync: false
+      # Proxies in front of the API. Check the client IPs in the request log after a change
+      - key: TRUST_PROXY
+        sync: false
+      # Brevo. Render's free plan blocks the ports 25, 465 and 587
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: 2525
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  - type: web
+    name: ecommerce-web
+    runtime: image
+    image:
+      url: ghcr.io/benedictpolacek/ecommerce-web:latest
+    plan: free
+    region: frankfurt
+    healthCheckPath: /version.txt
+    envVars:
+      # The port Caddy listens on (Caddyfile default)
+      - key: PORT
+        value: 8080
+      # Public URL of the ecommerce-api service: free services have no private network
+      - key: API_UPSTREAM
+        sync: false

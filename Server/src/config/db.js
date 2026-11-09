@@ -14,10 +14,10 @@ const pool = config.db.connectionString
       password: config.db.password,
     });
 
-// Event listener to log unexpected errors on idle pool clients
+// A lost idle connection is normal (database restart, hosted databases that scale to zero).
+// The pool drops that client and opens a new one on demand, so the process keeps running.
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle PostgreSQL client', err);
-  process.exit(-1);
+  console.error('Lost an idle PostgreSQL connection:', err.message);
 });
 
 /**

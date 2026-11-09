@@ -10,6 +10,8 @@ const transport = isTest
       host: config.mail.smtp.host,
       port: config.mail.smtp.port,
       secure: config.mail.smtp.secure,
+      // With a password: refuse to send it over an unencrypted connection (no STARTTLS)
+      requireTLS: Boolean(config.mail.smtp.user),
       auth: config.mail.smtp.user
         ? { user: config.mail.smtp.user, pass: config.mail.smtp.password }
         : undefined,

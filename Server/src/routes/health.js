@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
+import { config } from '../config/env.js';
 
 const DB_TIMEOUT_MS = 2000;
 
@@ -32,6 +33,8 @@ export function createHealthRouter({ ping = pingDatabase } = {}) {
     res.status(200).json({
       status: 'ok',
       message: 'Ecommerce REST API is running',
+      // Lets a deployment check that the new release is really the one answering
+      version: config.version,
       timestamp: new Date().toISOString(),
     });
   });
