@@ -1,6 +1,7 @@
 import pool from '../config/db.js';
 import { config } from '../config/env.js';
 import { seed } from './seeders/index.js';
+import { describeError } from './describe-error.js';
 
 // Usage: node src/db/seed.js (run db:migrate first)
 async function main() {
@@ -23,7 +24,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error('Seeding failed:', error.message);
+    console.error('Seeding failed:', describeError(error));
     process.exitCode = 1;
   })
   .finally(() => pool.end());

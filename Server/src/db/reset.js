@@ -2,6 +2,7 @@ import pool from '../config/db.js';
 import { config } from '../config/env.js';
 import { ensureDatabaseExists, migrate } from './migrator.js';
 import { seed } from './seeders/index.js';
+import { describeError } from './describe-error.js';
 
 // Usage: npm run db:reset
 // Deletes EVERYTHING in the local database (all tables, users, orders), runs all
@@ -38,7 +39,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error('Reset failed:', error.message);
+    console.error('Reset failed:', describeError(error));
     process.exitCode = 1;
   })
   .finally(() => pool.end());
