@@ -40,6 +40,16 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 
+  it('gives a DATABASE_URL without port the Postgres default, not PGPORT', () => {
+    const db = (url) => parseEnv({ JWT_SECRET: validSecret, PGPORT: '5433', DATABASE_URL: url }).db;
+    expect(db('postgresql://u:p@db.example.com/shop?sslmode=verify-full').connectionString).toBe(
+      'postgresql://u:p@db.example.com:5432/shop?sslmode=verify-full'
+    );
+    expect(db('postgresql://u:p@db.example.com:6543/shop').connectionString).toBe(
+      'postgresql://u:p@db.example.com:6543/shop'
+    );
+  });
+
   it('treats empty values as unset', () => {
     expect(() => parseEnv({ JWT_SECRET: '' })).toThrow(/JWT_SECRET/);
     expect(parseEnv({ JWT_SECRET: validSecret, DATABASE_URL: '' }).db.connectionString).toBe(
