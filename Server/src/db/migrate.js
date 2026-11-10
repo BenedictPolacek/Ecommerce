@@ -1,4 +1,5 @@
 import { migrate } from './migrator.js';
+import { describeError } from './describe-error.js';
 
 // Usage: node src/db/migrate.js [up|down] [count]
 // up runs all pending migrations, down rolls back the last one by default
@@ -23,6 +24,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Migration failed:', error.message);
+  console.error('Migration failed:', describeError(error));
   process.exit(1);
 });
