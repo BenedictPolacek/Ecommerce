@@ -93,6 +93,14 @@ export const parseEnv = (rawEnv) => {
 
   const env = result.data;
   const stripTrailingSlash = (url) => url.replace(/\/+$/, '');
+  // Without a port in the URL, pg would silently use PGPORT from the environment (5433 for the
+  // local Docker database) and time out against the hosted one. Postgres' default is 5432.
+  const withDefaultPort = (connectionString) => {
+    if (!connectionString) return connectionString;
+    const url = new URL(connectionString);
+    if (!url.port) url.port = '5432';
+    return url.toString();
+  };
   const appUrl = stripTrailingSlash(env.APP_URL);
   // null = provider not configured (no login button for it)
   const oauthClient = (clientId, clientSecret) =>
@@ -104,7 +112,7 @@ export const parseEnv = (rawEnv) => {
     version: env.GIT_SHA,
     isProduction: env.NODE_ENV === 'production',
     db: {
-      connectionString: env.DATABASE_URL,
+      connectionString: withDefaultPort(env.DATABASE_URL),
       host: env.PGHOST,
       port: env.PGPORT,
       database: env.PGDATABASE,
