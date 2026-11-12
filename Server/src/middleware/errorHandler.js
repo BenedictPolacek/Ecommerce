@@ -1,6 +1,7 @@
 import { AppError } from '../utils/AppError.js';
 import { ZodError } from 'zod';
 import { config } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { toValidationError } from './validate.js';
 
 /**
@@ -61,14 +62,12 @@ export const errorHandler = (err, req, res, _next) => {
     error.statusCode || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
   const isDevelopment = config.nodeEnv === 'development';
 
-  // Logging
-  if (config.nodeEnv !== 'test') {
-    if (statusCode >= 500) {
-      console.error(`[CRITICAL ERROR 500] ${error.message}`);
-      console.error(error.stack || err.stack);
-    } else {
-      console.warn(`[Client Error ${statusCode}] ${error.message}`);
-    }
+  // Logging: server errors get their own line with the stack. For client errors the reason is
+  // added to the request log line (requestLogger), one line per request is enough.
+  if (statusCode >= 500) {
+    logger.error({ reqId: req.id, err }, error.message || 'Internal Server Error');
+  } else {
+    res.locals.errorMessage = error.message;
   }
 
   // Final structured response

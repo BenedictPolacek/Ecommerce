@@ -14,6 +14,8 @@ const envSchema = z.object({
   // Commit the image was built from (Dockerfile build argument)
   GIT_SHA: z.string().default('dev'),
   PORT: z.coerce.number().int().positive().default(5000),
+  // Default: info, silent under Jest (set LOG_LEVEL=debug to see logs while debugging a test)
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
 
   DATABASE_URL: z.url().optional(),
   PGHOST: z.string().default('localhost'),
@@ -111,6 +113,7 @@ export const parseEnv = (rawEnv) => {
     nodeEnv: env.NODE_ENV,
     version: env.GIT_SHA,
     isProduction: env.NODE_ENV === 'production',
+    logLevel: env.LOG_LEVEL ?? (env.NODE_ENV === 'test' ? 'silent' : 'info'),
     db: {
       connectionString: withDefaultPort(env.DATABASE_URL),
       host: env.PGHOST,

@@ -1,6 +1,7 @@
 import { catchAsync } from '../../utils/catchAsync.js';
 import { authService } from './auth.service.js';
 import { config } from '../../config/env.js';
+import { logger } from '../../config/logger.js';
 import { accessTokenTtlMs, refreshTokenTtlMs } from './tokens.js';
 import { OAuthSignInError } from './oauth/oauth-error.js';
 import {
@@ -285,7 +286,7 @@ export const authController = {
     } catch (error) {
       if (error instanceof OAuthSignInError) return oauthFailed(res, error.code);
       // Provider errors (wrong state, invalid code, network): logged, the user just sees "failed"
-      console.warn(`[OAuth ${provider}] sign-in failed: ${error.message}`);
+      logger.warn({ reqId: req.id, provider, err: error }, 'OAuth sign-in failed');
       return oauthFailed(res, 'failed');
     }
   }),

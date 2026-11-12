@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import healthRoutes from './routes/health.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimit.js';
+import { requestLogger } from './middleware/requestLogger.js';
 
 const app = express();
 
@@ -27,16 +27,8 @@ app.use(
   })
 );
 
-// HTTP request logging
-// Production: standard Apache format without colors (log collectors parse it). Health checks
-// are left out, the platform polls them every few seconds.
-if (config.nodeEnv !== 'test') {
-  app.use(
-    morgan(config.isProduction ? 'combined' : 'dev', {
-      skip: (req) => req.originalUrl.startsWith('/api/health'),
-    })
-  );
-}
+// Request ID + one JSON log line per request (silent under Jest)
+app.use(requestLogger);
 
 // Body & Cookie parsing
 app.use(express.json());

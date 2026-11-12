@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import express from 'express';
 import request from 'supertest';
 import app from '../../src/app.js';
+import { logger } from '../../src/config/logger.js';
 import { createHealthRouter, pingDatabase } from '../../src/routes/health.js';
 import { closeDatabase } from './helpers/db.js';
 
@@ -24,7 +25,7 @@ describe('Health checks', () => {
       '/health',
       createHealthRouter({ ping: () => Promise.reject(new Error('connect ECONNREFUSED')) })
     );
-    const errorLog = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorLog = jest.spyOn(logger, 'error');
 
     const res = await request(failing).get('/health/ready').expect(503);
 

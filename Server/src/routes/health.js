@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
 import { config } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 const DB_TIMEOUT_MS = 2000;
 
@@ -45,7 +46,7 @@ export function createHealthRouter({ ping = pingDatabase } = {}) {
       res.status(200).json({ status: 'ok', checks: { database: 'ok' } });
     } catch (error) {
       // The reason goes to the logs, not to the public response
-      console.error('Readiness check failed:', error.message);
+      logger.error({ err: error }, 'Readiness check failed');
       res.status(503).json({ status: 'unavailable', checks: { database: 'unavailable' } });
     }
   });

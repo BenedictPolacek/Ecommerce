@@ -1,10 +1,13 @@
 import app from './app.js';
 import { config } from './config/env.js';
 import { pool } from './config/db.js';
+import { logger } from './config/logger.js';
 
 const server = app.listen(config.port, () => {
-  console.log(`🚀 Server listening on port ${config.port} (${config.nodeEnv})`);
-  console.log(`👉 API Health Check: http://localhost:${config.port}/api/health`);
+  logger.info(
+    { port: config.port, env: config.nodeEnv },
+    `Server listening on http://localhost:${config.port}`
+  );
 });
 
 let shuttingDown = false;
@@ -13,20 +16,20 @@ let shuttingDown = false;
 const shutdown = (reason, exitCode = 0) => {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`\nReceived ${reason}. Shutting down gracefully...`);
+  logger.info({ reason }, 'Shutting down gracefully');
 
   setTimeout(() => {
-    console.error('Forcing shutdown after timeout.');
+    logger.error('Forcing shutdown after timeout');
     process.exit(1);
   }, 10000).unref();
 
   server.close(async () => {
-    console.log('HTTP server closed.');
+    logger.info('HTTP server closed');
     try {
       await pool.end();
-      console.log('Database pool closed.');
+      logger.info('Database pool closed');
     } catch (err) {
-      console.error('Error while closing the database pool', err);
+      logger.error({ err }, 'Error while closing the database pool');
       exitCode = 1;
     }
     process.exit(exitCode);
@@ -39,11 +42,11 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 // The app state is unknown after an unhandled error: exit and let the process manager
 // (Docker, hosting platform) start a fresh instance
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
+  logger.fatal({ err: reason }, 'Unhandled promise rejection');
   shutdown('unhandledRejection', 1);
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+  logger.fatal({ err }, 'Uncaught exception');
   shutdown('uncaughtException', 1);
 });

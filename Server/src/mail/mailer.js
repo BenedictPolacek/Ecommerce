@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 const isTest = config.nodeEnv === 'test';
 
@@ -41,7 +42,8 @@ export const sendMail = async (mail) => {
  */
 export const sendMailInBackground = (mail) => {
   sendMail(mail).catch((error) => {
-    console.error(`Failed to send mail "${mail.subject}" to ${mail.to}:`, error.message);
+    // No recipient address: logs are kept longer and read by more people than the database
+    logger.error({ err: error, subject: mail.subject }, 'Failed to send mail');
   });
 };
 
