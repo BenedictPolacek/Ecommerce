@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { logger } from '../../src/config/logger.js';
 import { outbox } from '../../src/mail/mailer.js';
 import { resetDatabase, closeDatabase, query } from './helpers/db.js';
 import {
@@ -303,14 +304,17 @@ describe('GET /auth/oauth/:provider/callback', () => {
   });
 
   it('fails when the state does not match (login CSRF)', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = jest.spyOn(logger, 'warn');
 
     const res = await signIn('google', { callback: { state: 'forged-state' } });
 
     expect(res.headers.location).toBe(`${APP_URL}/login?oauth_error=failed`);
     expect(await findUserByEmail('anna@gmail.com')).toBeNull();
     // openid-client refused the response; the reason is logged for the developers
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[OAuth google] sign-in failed'));
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'google' }),
+      'OAuth sign-in failed'
+    );
     warn.mockRestore();
   });
 
