@@ -16,6 +16,7 @@ RUN npx vite build
 FROM caddy:2-alpine
 
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --from=build /app/dist /srv
 
 # The commit of this image: the deployment checks /version.txt
@@ -27,3 +28,6 @@ RUN addgroup -S web && adduser -S -G web web && chown -R web:web /data /config
 USER web
 
 EXPOSE 8080
+
+# Wakes the API in the background, then runs Caddy as PID 1 (gets SIGTERM directly)
+CMD ["docker-entrypoint.sh"]
