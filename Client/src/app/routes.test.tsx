@@ -21,6 +21,14 @@ describe('routing', () => {
     expect(screen.getByRole('link', { name: 'Ecommerce Shop' })).toBeInTheDocument();
   });
 
+  it('tells every visitor that this is a demo shop', async () => {
+    loggedOut();
+    renderRoute('/');
+
+    expect(await screen.findByText(/a portfolio project\. Orders are not shipped/)).toBeVisible();
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('not a real store');
+  });
+
   it('shows a not found page for unknown URLs', async () => {
     loggedOut();
     renderRoute('/does-not-exist');

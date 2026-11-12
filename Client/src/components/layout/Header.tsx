@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser, useLeaveSession, useLogout } from '@/features/auth/hooks';
 import { CartLink } from '@/features/cart/components/CartLink';
+import { DemoNotice } from './DemoNotice';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground';
@@ -23,6 +24,8 @@ export function Header() {
 
   return (
     <header className="border-b">
+      {/* Inside the header landmark: axe flags page content outside of landmarks */}
+      <DemoNotice />
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <Link to="/" className="text-lg font-bold">
           Ecommerce Shop
