@@ -1,5 +1,6 @@
 import { Outlet, ScrollRestoration } from 'react-router';
 import { VerifyEmailBanner } from '@/features/auth/components/VerifyEmailBanner';
+import { ApiWakingNotice } from './ApiWakingNotice';
 import { Footer } from './Footer';
 import { Header } from './Header';
 
@@ -15,6 +16,7 @@ export function RootLayout() {
         Skip to content
       </a>
       <Header />
+      <ApiWakingNotice />
       <VerifyEmailBanner />
       {/* tabIndex -1: the skip link can move the focus here (main is not focusable otherwise) */}
       <main id="main" tabIndex={-1} className="container mx-auto flex-1 px-4 outline-none">

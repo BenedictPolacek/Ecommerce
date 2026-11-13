@@ -28,6 +28,14 @@ export class ApiError extends Error {
   }
 }
 
+/** The API could not be reached at all (offline, server down or still starting) */
+export class NetworkError extends Error {
+  constructor() {
+    super('The shop could not be reached. Please check your connection.');
+    this.name = 'NetworkError';
+  }
+}
+
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
 }
@@ -42,6 +50,9 @@ const send = (path: string, { body, headers, ...init }: RequestOptions) =>
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
+  }).catch((error: unknown) => {
+    // fetch rejects with a TypeError when no response arrives at all
+    throw error instanceof TypeError ? new NetworkError() : error;
   });
 
 // Refresh tokens are single use and reuse revokes the whole session. Parallel 401s must
