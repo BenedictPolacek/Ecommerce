@@ -287,6 +287,18 @@ describe('GET /auth/oauth/:provider/callback', () => {
     ]);
   });
 
+  it('accepts the issuer GitHub sends on the callback (RFC 9207)', async () => {
+    const res = await signIn('github', { callback: { iss: 'https://github.com/login/oauth' } });
+
+    expect(res.headers.location).toBe(`${APP_URL}/`);
+  });
+
+  it('refuses a GitHub callback from another issuer (mix-up attack)', async () => {
+    const res = await signIn('github', { callback: { iss: 'https://evil.example' } });
+
+    expect(res.headers.location).toBe(`${APP_URL}/login?oauth_error=failed`);
+  });
+
   it('refuses a GitHub account whose primary email is not verified', async () => {
     githubEmails = [{ email: 'mona@github.test', primary: true, verified: false }];
 

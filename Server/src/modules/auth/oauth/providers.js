@@ -74,7 +74,9 @@ const PROVIDERS = {
     loadConfig: async ({ clientId, clientSecret }) =>
       new oidc.Configuration(
         {
-          issuer: 'https://github.com',
+          // GitHub sends this as "iss" on the callback (RFC 9207, mix-up attack protection);
+          // openid-client rejects the callback when it differs
+          issuer: 'https://github.com/login/oauth',
           authorization_endpoint: 'https://github.com/login/oauth/authorize',
           token_endpoint: 'https://github.com/login/oauth/access_token',
         },
