@@ -1,3 +1,6 @@
+// Must be the first import: Sentry has to be set up before the rest of the app is loaded
+import './instrument.js';
+import * as Sentry from '@sentry/node';
 import app from './app.js';
 import { config } from './config/env.js';
 import { pool } from './config/db.js';
@@ -32,6 +35,8 @@ const shutdown = (reason, exitCode = 0) => {
       logger.error({ err }, 'Error while closing the database pool');
       exitCode = 1;
     }
+    // Send queued error reports (e.g. the crash that caused this shutdown) before exiting
+    await Sentry.close(2000);
     process.exit(exitCode);
   });
 };

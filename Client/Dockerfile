@@ -8,8 +8,11 @@ COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 COPY . .
+# Baked into the bundle at build time. Without a DSN (local builds) Sentry stays off
+ARG VITE_SENTRY_DSN=
+ARG GIT_SHA=dev
 # Type checks run in CI; the image only needs the bundle
-RUN npx vite build
+RUN VITE_GIT_SHA="$GIT_SHA" npx vite build
 
 # Stage 2: Caddy serves dist/ and forwards /api to the API container (same origin for the
 # sameSite=strict cookies). The final image contains no Node.js and no source code.
