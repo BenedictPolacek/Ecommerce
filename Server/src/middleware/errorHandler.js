@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { AppError } from '../utils/AppError.js';
 import { ZodError } from 'zod';
 import { config } from '../config/env.js';
@@ -66,6 +67,12 @@ export const errorHandler = (err, req, res, _next) => {
   // added to the request log line (requestLogger), one line per request is enough.
   if (statusCode >= 500) {
     logger.error({ reqId: req.id, err }, error.message || 'Internal Server Error');
+    // Only server errors are bugs; 4xx (wrong password, validation) are expected answers.
+    // The request ID links the Sentry issue to the log lines of the same request.
+    Sentry.captureException(err, {
+      tags: { request_id: req.id },
+      extra: { method: req.method, path: req.originalUrl?.split('?')[0] },
+    });
   } else {
     res.locals.errorMessage = error.message;
   }

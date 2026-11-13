@@ -14,6 +14,8 @@ const envSchema = z.object({
   // Commit the image was built from (Dockerfile build argument)
   GIT_SHA: z.string().default('dev'),
   PORT: z.coerce.number().int().positive().default(5000),
+  // Error tracking (Sentry project ecommerce-api). Not a secret: it only allows sending events
+  SENTRY_DSN: z.url().optional(),
   // Default: info, silent under Jest (set LOG_LEVEL=debug to see logs while debugging a test)
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
 
@@ -114,6 +116,7 @@ export const parseEnv = (rawEnv) => {
     version: env.GIT_SHA,
     isProduction: env.NODE_ENV === 'production',
     logLevel: env.LOG_LEVEL ?? (env.NODE_ENV === 'test' ? 'silent' : 'info'),
+    sentry: { dsn: env.SENTRY_DSN },
     db: {
       connectionString: withDefaultPort(env.DATABASE_URL),
       host: env.PGHOST,
