@@ -18,6 +18,10 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # Error tracking (Sentry project ecommerce-api, EU region). A DSN is not a secret:
+      # it only allows sending events, never reading them
+      - key: SENTRY_DSN
+        value: https://99e7f7b49463dda5a37ba76895803255@o4512421416730624.ingest.de.sentry.io/4512421446484048
       # Public URL of the shop (the ecommerce-web service)
       - key: APP_URL
         sync: false

@@ -287,6 +287,8 @@ jobs:
       # By digest, which cannot be changed afterwards. Dependabot does not see this line:
       # update it by hand, with a release that is at least two weeks old
       TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+      # Sentry project ecommerce-web (EU). Not a secret: it ends up in the public JS bundle
+      SENTRY_DSN_WEB: https://7f131868d5a1c79bf31e4214dd2c8d78@o4512421416730624.ingest.de.sentry.io/4512421452185680
 
     steps:
       - name: Check out code
@@ -307,6 +309,7 @@ jobs:
               --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
               --build-arg "GIT_SHA=$GITHUB_SHA" \
+              --build-arg "VITE_SENTRY_DSN=$SENTRY_DSN_WEB" \
               --tag "$prefix-$name:$GITHUB_SHA" \
               --tag "$prefix-$name:latest" \
               "$context"
