@@ -18,6 +18,24 @@ export const WAKE_RETRY_LIMIT = 15;
 /** 1 s, 2 s, 4 s, then every 5 s */
 export const wakeRetryDelay = (failureCount: number) => Math.min(1000 * 2 ** failureCount, 5000);
 
+/** Path served by the web server (Caddyfile): redirects the browser to the API's public URL */
+export const WAKE_PATH = '/wake-api';
+const WAKE_INTERVAL_MS = 10_000;
+let lastWakeAt = Number.NEGATIVE_INFINITY;
+
+/**
+ * Asks the browser to wake the API. Render only wakes a sleeping service for requests from
+ * the internet: the web server's own /api proxy requests come from inside Render and get an
+ * immediate 502. So the visitor's browser follows a redirect to the API itself, loaded as an
+ * invisible image (allowed by the CSP's img-src https:; whether the "image" loads does not
+ * matter, the request alone wakes the API). At most once every few seconds.
+ */
+export function wakeApi(now = Date.now()) {
+  if (now - lastWakeAt < WAKE_INTERVAL_MS) return;
+  lastWakeAt = now;
+  new Image().src = `${WAKE_PATH}?t=${now}`;
+}
+
 /** A first load counts as slow after this long (the API may be starting without failing) */
 const SLOW_FIRST_LOAD_MS = 4000;
 

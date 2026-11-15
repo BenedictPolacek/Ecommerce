@@ -1,26 +1,17 @@
 #!/bin/sh
-# Starts Caddy and, in the background, wakes the API. On Render's free plan both services
-# sleep and wake up separately: without this, the API would only start once the first /api
-# request reaches it, after the web service itself has woken up (twice the waiting time).
+# Works out where /wake-api redirects to, then runs Caddy as PID 1 (gets SIGTERM directly).
+#
+# On Render's free plan the API sleeps, and only requests from the internet wake it: requests
+# from another Render service (our /api proxy, or a wget from here) get an immediate 502.
+# So the browser wakes it: the client loads /wake-api, which redirects to the API's public URL.
 set -eu
 
-upstream="${API_UPSTREAM:-api:5000}"
-case "$upstream" in
-  http://* | https://*) ;;
-  *) upstream="http://$upstream" ;;
+case "${API_UPSTREAM:-}" in
+  # Public URL (Render): the browser calls the API directly
+  http://* | https://*) API_WAKE_URL="${API_UPSTREAM%/}/api/health" ;;
+  # Host name inside docker compose: unreachable for the browser, and nothing sleeps there
+  *) API_WAKE_URL="/api/health" ;;
 esac
-
-wake_api() {
-  for _ in 1 2 3 4 5 6; do
-    if wget -q -O /dev/null -T 30 "$upstream/api/health"; then
-      echo "API is awake"
-      return 0
-    fi
-    sleep 10
-  done
-  echo "Could not reach the API at $upstream; it wakes up with the first /api request"
-}
-
-wake_api &
+export API_WAKE_URL
 
 exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
