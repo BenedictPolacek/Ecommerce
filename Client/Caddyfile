@@ -25,6 +25,14 @@
 		}
 	}
 
+	# Wakes a sleeping API: the browser follows this redirect to the API's public URL
+	# (API_WAKE_URL is set by docker-entrypoint.sh). Never cached, every call must reach it
+	handle /wake-api {
+		header Cache-Control "no-store"
+		# "*" first: a target starting with "/" would otherwise be read as a path matcher
+		redir * {$API_WAKE_URL:/api/health} 302
+	}
+
 	# The SPA. The API sets its own security headers (helmet)
 	handle {
 		root * /srv

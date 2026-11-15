@@ -1,10 +1,10 @@
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '@/app/query-client';
 import { ApiError, api, NetworkError } from '@/lib/api-client';
 import { fail, mockApi, ok, sequence } from '@/test/mock-api';
 import { renderRoute } from '@/test/render';
-import { isWakingError, WAKE_RETRY_LIMIT, wakeRetryDelay } from './api-waking';
+import { isWakingError, WAKE_PATH, WAKE_RETRY_LIMIT, wakeApi, wakeRetryDelay } from './api-waking';
 
 const visitor = { 'GET /users/me': fail(401), 'POST /auth/refresh': fail(401) };
 
@@ -45,6 +45,51 @@ describe('retry policy for reads', () => {
     expect(retry(1, new ApiError('Bug', 500))).toBe(true);
     expect(retry(2, new ApiError('Bug', 500))).toBe(false);
     expect(retry(0, new ApiError('Not found', 404))).toBe(false);
+  });
+});
+
+describe('wakeApi', () => {
+  const requested: string[] = [];
+  beforeEach(() => {
+    requested.length = 0;
+    vi.stubGlobal(
+      'Image',
+      class {
+        set src(url: string) {
+          requested.push(url);
+        }
+      }
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  // The time of the last wake-up is kept per page (module state), and other tests in this
+  // file wake the API too: each test starts later than any wake-up before it
+  it('lets the browser request the wake-up redirect, at most every few seconds', () => {
+    const start = Date.now() + 60_000;
+    wakeApi(start);
+    wakeApi(start + 5_000);
+    wakeApi(start + 10_000);
+
+    expect(requested).toEqual([`${WAKE_PATH}?t=${start}`, `${WAKE_PATH}?t=${start + 10_000}`]);
+  });
+
+  it('is called when a read fails because the API is asleep', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 120_000);
+    const retry = createQueryClient().getDefaultOptions().queries!.retry as (
+      failureCount: number,
+      error: Error
+    ) => boolean;
+
+    retry(0, new ApiError('Not found', 404));
+    expect(requested).toEqual([]);
+
+    retry(0, new ApiError('Bad gateway', 502));
+    expect(requested).toHaveLength(1);
   });
 });
 

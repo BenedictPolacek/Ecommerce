@@ -32,5 +32,5 @@ USER web
 
 EXPOSE 8080
 
-# Wakes the API in the background, then runs Caddy as PID 1 (gets SIGTERM directly)
+# Sets the wake-up URL for /wake-api, then runs Caddy as PID 1 (gets SIGTERM directly)
 CMD ["docker-entrypoint.sh"]
