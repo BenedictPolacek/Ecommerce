@@ -13,8 +13,15 @@ export function initSentry() {
     environment: import.meta.env.MODE,
     // Same release name as the API: the commit the image was built from
     release: import.meta.env.VITE_GIT_SHA,
-    // No cookies, IP addresses or user data in the reports
-    sendDefaultPii: false,
+    // No cookies, IP addresses, user data, headers, bodies or query strings in the reports.
+    // Must be set explicitly: since v11, leaving dataCollection out collects all of them.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+    },
     // Errors only, no performance tracing or session replays
     tracesSampleRate: 0,
   });
